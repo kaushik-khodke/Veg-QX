@@ -50,12 +50,14 @@ def predict_single_reading(
         res = inference_svc.predict_single(raw_bands)
 
         # Merge in identifiers and metadata
+        spec_prefix = commodity[:3].upper()
+        specimen_id = req.specimen_id or f"{spec_prefix}-{req.tomato_id or get_next_tomato_id()}"
         res["commodity"] = commodity
         res["food_type"] = commodity
-        res["specimen_id"] = req.specimen_id
+        res["specimen_id"] = specimen_id
         res["tomato_id"] = req.tomato_id
         res["position"] = req.position
-        res["input_source"] = req.input_source
+        res["input_source"] = req.input_source or "manual"
 
         # Store prediction (SQLite + CSV)
         record_data = {**raw_bands, **res}
@@ -66,7 +68,7 @@ def predict_single_reading(
             id=db_id,
             commodity=commodity,
             food_type=commodity,
-            specimen_id=req.specimen_id,
+            specimen_id=specimen_id,
             Blue=req.Blue,
             Green=req.Green,
             Yellow=req.Yellow,
@@ -124,12 +126,14 @@ def predict_batch_readings(
                 "NIR": reading.NIR,
             }
             res = inference_svc.predict_single(raw_bands)
+            spec_prefix = commodity[:3].upper()
+            specimen_id = reading.specimen_id or f"{spec_prefix}-{reading.tomato_id or get_next_tomato_id()}"
             res["commodity"] = commodity
             res["food_type"] = commodity
-            res["specimen_id"] = reading.specimen_id
+            res["specimen_id"] = specimen_id
             res["tomato_id"] = reading.tomato_id
             res["position"] = reading.position
-            res["input_source"] = reading.input_source
+            res["input_source"] = reading.input_source or "manual"
 
             # Save row
             record_data = {**raw_bands, **res}
@@ -143,7 +147,7 @@ def predict_batch_readings(
                     id=db_id,
                     commodity=commodity,
                     food_type=commodity,
-                    specimen_id=reading.specimen_id,
+                    specimen_id=specimen_id,
                     Blue=reading.Blue,
                     Green=reading.Green,
                     Yellow=reading.Yellow,

@@ -54,12 +54,13 @@ async def live_sensor_websocket(
     Clients receive predictions dynamically as new hardware readings arrive.
     """
     await websocket.accept()
-    print("[WebSocket] Client connected for live sensor data.")
+    commodity = websocket.query_params.get("commodity") or "tomato"
+    print(f"[WebSocket] Client connected for live sensor data (commodity: {commodity}).")
 
     # Capture the running event loop in the async context so thread-safe callbacks can schedule items
     loop = asyncio.get_running_loop()
     queue = asyncio.Queue()
-    inference_svc = get_inference_service("tomato")
+    inference_svc = get_inference_service(commodity)
 
     def thread_safe_callback(data: dict):
         # Schedule queue insert in the running async event loop from background thread
@@ -119,12 +120,19 @@ async def live_sensor_websocket(
                 # Combine reading and prediction
                 full_payload = {**reading, **raw_bands, **pred}
 
+                spec_prefix = commodity[:3].upper()
+                tomato_id = reading.get("tomato_id")
+                specimen_id = reading.get("specimen_id") or f"{spec_prefix}-{tomato_id or 'LIVE'}"
+
                 # Save record to SQLite + CSV dual-storage
                 save_prediction({
                     **raw_bands,
                     **pred,
-                    "tomato_id": reading.get("tomato_id"),
-                    "position": reading.get("position"),
+                    "commodity": commodity,
+                    "food_type": commodity,
+                    "specimen_id": specimen_id,
+                    "tomato_id": tomato_id,
+                    "position": reading.get("position", 1),
                     "input_source": "usb",
                 })
             except Exception as pe:
