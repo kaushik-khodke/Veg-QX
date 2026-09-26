@@ -142,7 +142,7 @@ export default function TomatoScene() {
         {/* ─── LEFT SIDE CARDS ─────────────────────────────────────────────────── */}
 
         {/* 1. MODEL CARD */}
-        <div className="absolute top-2 left-2 z-20 bg-slate-50/90 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200/90 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-44 backdrop-blur-md shadow-xs dark:shadow-lg hover:border-emerald-400 dark:hover:border-[rgba(0,255,180,0.4)] transition-all">
+        <div className="absolute top-2 left-2 z-20 bg-slate-50/90 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200/90 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-48 backdrop-blur-md shadow-xs dark:shadow-lg hover:border-emerald-400 dark:hover:border-[rgba(0,255,180,0.4)] transition-all">
           <div className="flex items-center gap-1.5 mb-1 text-emerald-600 dark:text-[#00FF88]">
             <Cpu size={14} />
             <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">MODEL</span>
@@ -152,17 +152,28 @@ export default function TomatoScene() {
         </div>
 
         {/* 2. VERSION CARD */}
-        <div className="absolute top-36 left-2 z-20 bg-slate-50/90 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200/90 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-44 backdrop-blur-md shadow-xs dark:shadow-lg hover:border-emerald-400 dark:hover:border-[rgba(0,255,180,0.4)] transition-all">
+        <div className="absolute top-36 left-2 z-20 bg-slate-50/90 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200/90 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-48 backdrop-blur-md shadow-xs dark:shadow-lg hover:border-emerald-400 dark:hover:border-[rgba(0,255,180,0.4)] transition-all">
           <div className="flex items-center gap-1.5 mb-1 text-emerald-600 dark:text-[#00FF88]">
             <Layers size={14} />
             <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">VERSION</span>
           </div>
-          <div className="text-lg font-bold text-emerald-600 dark:text-[#00FF88] tracking-wide">{activeModelInfo.version}</div>
+          <div 
+            className={`font-bold text-emerald-600 dark:text-[#00FF88] truncate ${
+              activeModelInfo.version.length > 15
+                ? "text-[12px] sm:text-[13px] tracking-tight py-0.5"
+                : activeModelInfo.version.length > 12
+                ? "text-sm sm:text-base tracking-tight"
+                : "text-lg tracking-wide"
+            }`}
+            title={activeModelInfo.version}
+          >
+            {activeModelInfo.version}
+          </div>
           <span className="text-[8.5px] text-slate-500 dark:text-slate-400 block mt-0.5">Current Active Model</span>
         </div>
 
         {/* 3. FRESHNESS SCORE CARD (BOTTOM LEFT) */}
-        <div className="absolute bottom-2 left-2 z-20 bg-slate-50/90 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200/90 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-44 backdrop-blur-md shadow-xs dark:shadow-lg hover:border-emerald-400 transition-all">
+        <div className="absolute bottom-2 left-2 z-20 bg-slate-50/90 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200/90 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-48 backdrop-blur-md shadow-xs dark:shadow-lg hover:border-emerald-400 transition-all">
           <div className="flex items-center gap-1.5 mb-1 text-emerald-600 dark:text-[#00FF88]">
             <Leaf size={14} />
             <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">FRESHNESS SCORE</span>
@@ -179,7 +190,7 @@ export default function TomatoScene() {
         {/* ─── RIGHT SIDE CARDS ────────────────────────────────────────────────── */}
 
         {/* 4. ACCURACY CARD */}
-        <div className="absolute top-2 right-2 z-20 bg-slate-50/90 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200/90 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-44 backdrop-blur-md shadow-xs dark:shadow-lg hover:border-emerald-400 transition-all text-right">
+        <div className="absolute top-2 right-2 z-20 bg-slate-50/90 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200/90 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-48 backdrop-blur-md shadow-xs dark:shadow-lg hover:border-emerald-400 transition-all text-right">
           <div className="flex items-center justify-end gap-1.5 mb-1 text-emerald-600 dark:text-[#00FF88]">
             <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">ACCURACY</span>
             <Target size={14} />
@@ -189,7 +200,7 @@ export default function TomatoScene() {
         </div>
 
         {/* 5. R² SCORE CARD */}
-        <div className="absolute top-36 right-2 z-20 bg-slate-50/90 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200/90 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-44 backdrop-blur-md shadow-xs dark:shadow-lg hover:border-emerald-400 transition-all text-right">
+        <div className="absolute top-36 right-2 z-20 bg-slate-50/90 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200/90 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-48 backdrop-blur-md shadow-xs dark:shadow-lg hover:border-emerald-400 transition-all text-right">
           <div className="flex items-center justify-end gap-1.5 mb-1 text-emerald-600 dark:text-[#00FF88]">
             <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">R² SCORE</span>
             <TrendingUp size={14} />
@@ -199,7 +210,7 @@ export default function TomatoScene() {
         </div>
 
         {/* 6. CATEGORY CARD (BOTTOM RIGHT) */}
-        <div className="absolute bottom-2 right-2 z-20 bg-slate-50/90 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200/90 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-44 backdrop-blur-md shadow-xs dark:shadow-lg hover:border-emerald-400 transition-all text-right">
+        <div className="absolute bottom-2 right-2 z-20 bg-slate-50/90 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200/90 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-48 backdrop-blur-md shadow-xs dark:shadow-lg hover:border-emerald-400 transition-all text-right">
           <div className="flex items-center justify-end gap-1.5 mb-1 text-emerald-600 dark:text-[#00FF88]">
             <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">CATEGORY</span>
             <Compass size={14} />

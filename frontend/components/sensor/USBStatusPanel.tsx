@@ -117,10 +117,10 @@ export default function USBStatusPanel({ onStatusChange }: USBStatusPanelProps) 
     }
   };
 
-  // Poll available ports dynamically every 2.5 seconds
+  // Poll available ports dynamically every 7.5 seconds
   useEffect(() => {
     fetchPorts();
-    const interval = setInterval(fetchPorts, 2500);
+    const interval = setInterval(fetchPorts, 7500);
     return () => clearInterval(interval);
   }, [fetchPorts]);
 
