@@ -142,7 +142,7 @@ export default function RetrainingPage() {
           </p>
         </div>
         <a
-          href={api.getDownloadVerifiedCsvUrl()}
+          href={api.getDownloadVerifiedCsvUrl(commodity)}
           download
           className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/30 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs font-mono font-bold transition-all shadow-xs"
         >
@@ -358,6 +358,9 @@ export default function RetrainingPage() {
                     DEPLOYED MODEL ({result.new_version})
                   </span>
                   <div className="space-y-1 text-xs">
+                    {result.selected_classifier && (
+                      <div>ALGORITHM: <span className="text-emerald-700 dark:text-emerald-400 font-bold">{result.selected_classifier} (Highest Acc)</span></div>
+                    )}
                     <div>ACCURACY: <span className="text-emerald-700 dark:text-emerald-400 font-bold">{(result.metrics.new_accuracy * 100).toFixed(2)}%</span></div>
                     <div>REGRESSION R²: <span className="text-emerald-700 dark:text-emerald-400 font-bold">{result.metrics.new_r2.toFixed(4)}</span></div>
                     {result.metrics.f1 && <div>F1 SCORE: <span className="text-slate-700 dark:text-slate-300 font-semibold">{(result.metrics.f1 * 100).toFixed(2)}%</span></div>}
@@ -411,6 +414,10 @@ export default function RetrainingPage() {
             <div>
               <span className="text-amber-600 dark:text-amber-400 font-bold block">04 / AUTOMATIC ROLLBACK</span>
               <p>If candidate model fails performance limits, previous active model remains deployed and verified queue is preserved.</p>
+            </div>
+            <div>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold block">05 / HIGHEST ACCURACY CANDIDATE</span>
+              <p>Algorithm candidates are benchmarked during retraining, and the model with the highest classification accuracy is selected and deployed.</p>
             </div>
           </div>
         </div>
