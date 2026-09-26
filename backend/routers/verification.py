@@ -33,35 +33,45 @@ class BulkVerificationRequest(BaseModel):
 
 
 @router.get("/stats")
-def fetch_verification_stats():
-    """Returns dynamic verification metrics directly calculated from SQLite active records."""
+def fetch_verification_stats(commodity: Optional[str] = None):
+    """Returns dynamic verification metrics directly calculated from SQLite active records, optionally filtered by specimen."""
     try:
-        stats = get_verification_stats()
+        clean_comm = commodity.strip().lower() if commodity and commodity.strip().lower() not in ("all", "all specimens", "none", "") else None
+        stats = get_verification_stats(food_type=clean_comm)
         return {"success": True, "data": stats}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/history")
-def fetch_verified_history():
-    """Returns active human-verified prediction records for audit in Verification Center."""
+def fetch_verified_history(
+    commodity: Optional[str] = None,
+    category: Optional[str] = None,
+):
+    """Returns active human-verified prediction records for audit in Verification Center, filtered by specimen or category."""
     try:
-        verified_records = get_verified_predictions_active()
+        clean_comm = commodity.strip().lower() if commodity and commodity.strip().lower() not in ("all", "all specimens", "none", "") else None
+        clean_cat = category.strip() if category and category.strip().lower() not in ("all", "all categories", "none", "") else None
+        verified_records = get_verified_predictions_active(food_type=clean_comm, category=clean_cat)
         return {"success": True, "total": len(verified_records), "data": verified_records}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/download_csv")
-def download_verified_dataset_csv():
+def download_verified_dataset_csv(commodity: Optional[str] = None):
     """
     Dynamically generates the verified training dataset CSV from SQLite
-    and streams it with a timestamped filename.
+    filtered by specimen type or all specimens, streaming it with a timestamped filename.
     """
     try:
-        csv_content = generate_verified_dataset_csv()
+        clean_comm = commodity.strip().lower() if commodity and commodity.strip().lower() not in ("all", "all specimens", "none", "") else None
+        csv_content = generate_verified_dataset_csv(food_type=clean_comm)
         timestamp_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        filename = f"verified_dataset_{timestamp_str}.csv"
+        if clean_comm:
+            filename = f"verified_dataset_{clean_comm}_{timestamp_str}.csv"
+        else:
+            filename = f"verified_dataset_all_specimens_{timestamp_str}.csv"
         
         return Response(
             content=csv_content,

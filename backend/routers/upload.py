@@ -4,6 +4,7 @@ Handles CSV and Excel file uploads for batch prediction.
 Validates file columns, checks for missing data, and returns predicted results.
 """
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+from typing import Optional
 import pandas as pd
 import io
 
@@ -16,13 +17,15 @@ router = APIRouter(prefix="/upload_csv", tags=["Upload"])
 @router.post("")
 async def upload_and_predict_dataset(
     file: UploadFile = File(...),
-    inference_svc: InferenceService = Depends(get_inference_service),
+    commodity: Optional[str] = None,
 ):
     """
     Accepts CSV or XLSX dataset, validates required spectral columns,
     runs batch predictions, saves all records to SQLite database,
     and automatically populates the verified retraining queue if ground truth labels exist.
     """
+    target_commodity = commodity or "tomato"
+    inference_svc = get_inference_service(target_commodity)
     filename = file.filename.lower()
     contents = await file.read()
 
@@ -57,9 +60,9 @@ async def upload_and_predict_dataset(
         )
 
     # Optional columns mapping
-    if "Tomato_ID" not in df.columns:
+    if "Tomato_ID" not in df.columns and "specimen_id" not in df.columns and "Specimen_ID" not in df.columns:
         df["Tomato_ID"] = None
-    if "Tomato_position" not in df.columns:
+    if "Tomato_position" not in df.columns and "position" not in df.columns:
         df["Tomato_position"] = None
     if "input_source" not in df.columns:
         df["input_source"] = "csv_upload"
@@ -74,9 +77,14 @@ async def upload_and_predict_dataset(
         # Save every uploaded dataset row into SQLite (predictions + verified_predictions)
         for idx, row in pred_df.iterrows():
             tomato_id = int(row["Tomato_ID"]) if pd.notna(row.get("Tomato_ID")) else None
-            position = int(row["Tomato_position"]) if pd.notna(row.get("Tomato_position")) else 1
+            position = int(row.get("Tomato_position", 1)) if pd.notna(row.get("Tomato_position")) else 1
+            raw_spec = row.get("Specimen_ID") or row.get("specimen_id")
+            specimen_id = str(raw_spec) if pd.notna(raw_spec) else f"{target_commodity[:3].upper()}-{tomato_id or idx+1}"
 
             record_data = {
+                "commodity": target_commodity,
+                "food_type": target_commodity,
+                "specimen_id": specimen_id,
                 "tomato_id": tomato_id,
                 "position": position,
                 "input_source": "csv_upload",
@@ -94,7 +102,7 @@ async def upload_and_predict_dataset(
                 "confidence_fresh": float(row.get("confidence_fresh", 0.0)),
                 "confidence_aging": float(row.get("confidence_aging", 0.0)),
                 "confidence_spoiling": float(row.get("confidence_spoiling", 0.0)),
-                "model_version": str(row.get("model_version", "v1.1")),
+                "model_version": str(row.get("model_version", inference_svc.get_canonical_model_name())),
             }
 
             db_id = save_prediction(record_data)
