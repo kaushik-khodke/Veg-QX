@@ -26,11 +26,21 @@ SNAPSHOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # ─── Connection & Transactions ────────────────────────────────────────────────
 
+_migrated = False
+
 def get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(PREDICTION_HISTORY_DB))
+    global _migrated
+    conn = sqlite3.connect(str(PREDICTION_HISTORY_DB), timeout=30.0)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL;")
     conn.execute("PRAGMA foreign_keys=ON;")
+    if not _migrated:
+        try:
+            _migrate_database_schema(conn)
+            conn.commit()
+            _migrated = True
+        except Exception as e:
+            print(f"[database_service] Migration notice: {e}")
     return conn
 
 
@@ -60,6 +70,10 @@ def _migrate_database_schema(conn: sqlite3.Connection):
     if cursor.fetchone():
         cursor.execute("PRAGMA table_info(predictions)")
         pred_cols = [row["name"] for row in cursor.fetchall()]
+        if "commodity" not in pred_cols:
+            cursor.execute("ALTER TABLE predictions ADD COLUMN commodity TEXT DEFAULT 'tomato'")
+        if "specimen_id" not in pred_cols:
+            cursor.execute("ALTER TABLE predictions ADD COLUMN specimen_id TEXT")
         if "status" not in pred_cols:
             cursor.execute("ALTER TABLE predictions ADD COLUMN status TEXT NOT NULL DEFAULT 'PENDING'")
         if "software_version" not in pred_cols:
@@ -76,6 +90,12 @@ def _migrate_database_schema(conn: sqlite3.Connection):
     if cursor.fetchone():
         cursor.execute("PRAGMA table_info(verified_predictions)")
         ver_cols = [row["name"] for row in cursor.fetchall()]
+        if "food_type" not in ver_cols:
+            cursor.execute("ALTER TABLE verified_predictions ADD COLUMN food_type TEXT DEFAULT 'tomato'")
+        if "commodity" not in ver_cols:
+            cursor.execute("ALTER TABLE verified_predictions ADD COLUMN commodity TEXT DEFAULT 'tomato'")
+        if "specimen_id" not in ver_cols:
+            cursor.execute("ALTER TABLE verified_predictions ADD COLUMN specimen_id TEXT")
         if "blue" not in ver_cols:
             cursor.execute("ALTER TABLE verified_predictions ADD COLUMN blue REAL")
             cursor.execute("ALTER TABLE verified_predictions ADD COLUMN green REAL")
@@ -163,8 +183,12 @@ def _repair_null_records(conn: sqlite3.Connection):
                 orange = COALESCE(orange, (SELECT orange FROM predictions WHERE predictions.id = verified_predictions.prediction_id), 50.0),
                 red = COALESCE(red, (SELECT red FROM predictions WHERE predictions.id = verified_predictions.prediction_id), 50.0),
                 nir = COALESCE(nir, (SELECT nir FROM predictions WHERE predictions.id = verified_predictions.prediction_id), 50.0),
-                freshness_score = COALESCE(freshness_score, (SELECT freshness_score FROM predictions WHERE predictions.id = verified_predictions.prediction_id), 85.0)
+                freshness_score = COALESCE(freshness_score, (SELECT freshness_score FROM predictions WHERE predictions.id = verified_predictions.prediction_id), 85.0),
+                commodity = COALESCE(commodity, food_type, 'tomato'),
+                food_type = COALESCE(food_type, commodity, 'tomato'),
+                specimen_id = COALESCE(specimen_id, 'SPEC-' || CAST(tomato_id AS TEXT))
             WHERE blue IS NULL OR green IS NULL OR yellow IS NULL OR orange IS NULL OR red IS NULL OR nir IS NULL
+               OR commodity IS NULL OR food_type IS NULL OR specimen_id IS NULL
         """)
 
     if has_pred:
@@ -176,8 +200,28 @@ def _repair_null_records(conn: sqlite3.Connection):
                 yellow = COALESCE(yellow, 50.0),
                 orange = COALESCE(orange, 50.0),
                 red = COALESCE(red, 50.0),
-                nir = COALESCE(nir, 50.0)
+                nir = COALESCE(nir, 50.0),
+                commodity = COALESCE(commodity, food_type, 'tomato'),
+                food_type = COALESCE(food_type, commodity, 'tomato'),
+                specimen_id = COALESCE(specimen_id, 'SPEC-' || CAST(tomato_id AS TEXT))
             WHERE blue IS NULL OR green IS NULL OR yellow IS NULL OR orange IS NULL OR red IS NULL OR nir IS NULL
+               OR commodity IS NULL OR food_type IS NULL OR specimen_id IS NULL
+        """)
+        # Canonicalize model version names in predictions
+        cursor.execute("""
+            UPDATE predictions
+            SET model_version = 'XGB_tomato_v1.1'
+            WHERE model_version IN ('tomato_v1.1', 'v1.1', '1.1') AND (food_type = 'tomato' OR food_type IS NULL)
+        """)
+        cursor.execute("""
+            UPDATE predictions
+            SET model_version = 'XGB_tomato_v1.0'
+            WHERE model_version IN ('tomato_v1.0', 'v1.0', '1.0') AND (food_type = 'tomato' OR food_type IS NULL)
+        """)
+        cursor.execute("""
+            UPDATE predictions
+            SET model_version = 'XGB_' || food_type || '_v1.0'
+            WHERE (model_version IN ('v1.0', '1.0') OR model_version IS NULL) AND food_type != 'tomato' AND food_type IS NOT NULL
         """)
 
     if has_ver:
@@ -190,6 +234,16 @@ def _repair_null_records(conn: sqlite3.Connection):
             gndvi_val = float((nir_val - green_val) / (nir_val + green_val + 1e-8))
             rvi_val = float(nir_val / (red_val + 1e-8))
             cursor.execute("UPDATE verified_predictions SET ndvi = ?, gndvi = ?, rvi = ? WHERE id = ?", (ndvi_val, gndvi_val, rvi_val, r["id"]))
+        cursor.execute("""
+            UPDATE verified_predictions
+            SET model_version = 'XGB_tomato_v1.1'
+            WHERE model_version IN ('tomato_v1.1', 'v1.1', '1.1') AND (commodity = 'tomato' OR food_type = 'tomato' OR commodity IS NULL)
+        """)
+        cursor.execute("""
+            UPDATE verified_predictions
+            SET model_version = 'XGB_' || COALESCE(commodity, food_type, 'tomato') || '_v1.0'
+            WHERE model_version IN ('v1.0', '1.0') OR model_version IS NULL
+        """)
 
 
 def init_database():
@@ -223,16 +277,22 @@ def get_next_tomato_id() -> int:
 def save_prediction(data: dict) -> int:
     """
     Insert a prediction record into SQLite and append to CSV.
-    Assigns a database-managed tomato_id if none is provided.
+    Assigns a database-managed tomato_id and specimen_id if none is provided.
     Returns the new row ID.
     """
+    commodity = data.get("commodity") or data.get("food_type") or "tomato"
     tomato_id = data.get("tomato_id")
     if not tomato_id:
         tomato_id = get_next_tomato_id()
 
+    specimen_id = data.get("specimen_id")
+    if not specimen_id:
+        spec_prefix = commodity[:3].upper()
+        specimen_id = f"{spec_prefix}-{tomato_id}"
+
     sql = """
     INSERT INTO predictions (
-        timestamp, food_type, tomato_id, position,
+        timestamp, food_type, commodity, specimen_id, tomato_id, position,
         blue, green, yellow, orange, red, nir,
         ndvi, gndvi, rvi,
         freshness_score, category,
@@ -240,7 +300,7 @@ def save_prediction(data: dict) -> int:
         model_version, input_source, status,
         software_version, firmware_version, sensor_type, device_id
     ) VALUES (
-        :timestamp, :food_type, :tomato_id, :position,
+        :timestamp, :food_type, :commodity, :specimen_id, :tomato_id, :position,
         :blue, :green, :yellow, :orange, :red, :nir,
         :ndvi, :gndvi, :rvi,
         :freshness_score, :category,
@@ -271,7 +331,9 @@ def save_prediction(data: dict) -> int:
 
     row = {
         "timestamp":            data.get("timestamp", datetime.utcnow().isoformat()),
-        "food_type":            data.get("commodity") or data.get("food_type") or "tomato",
+        "food_type":            commodity,
+        "commodity":            commodity,
+        "specimen_id":          specimen_id,
         "tomato_id":            tomato_id,
         "position":             data.get("position", 1),
         "blue":                 blue,
@@ -305,25 +367,31 @@ def save_prediction(data: dict) -> int:
 
 
 def get_prediction_history(
-    food_type: str = "tomato",
+    food_type: Optional[str] = None,
     limit: int = 100,
     offset: int = 0,
     category: Optional[str] = None,
     status: str = "PENDING",
 ) -> list[dict]:
-    """Returns only pending (unverified) predictions by default."""
-    filters = ["food_type = :food_type", "status = :status"]
-    params: dict = {"food_type": food_type, "status": status, "limit": limit, "offset": offset}
+    """Returns only pending (unverified) predictions by default.
+    Supports filtering by specific commodity/food_type or returning all specimens.
+    """
+    filters = ["status = :status"]
+    params: dict = {"status": status, "limit": limit, "offset": offset}
 
-    if category:
+    if food_type and food_type.strip().lower() not in ("all", "all specimens", "none", ""):
+        filters.append("(food_type = :food_type OR commodity = :food_type)")
+        params["food_type"] = food_type.strip().lower()
+
+    if category and category.strip().lower() not in ("all", "all categories", "none", ""):
         filters.append("category = :category")
-        params["category"] = category
+        params["category"] = category.strip()
 
     where = " AND ".join(filters)
     sql = f"""
     SELECT * FROM predictions
     WHERE {where}
-    ORDER BY timestamp DESC
+    ORDER BY timestamp DESC, id DESC
     LIMIT :limit OFFSET :offset
     """
     with db_context() as conn:
@@ -331,11 +399,27 @@ def get_prediction_history(
     return [dict(r) for r in rows]
 
 
-def get_prediction_count(food_type: str = "tomato", status: str = "PENDING") -> int:
+def get_prediction_count(
+    food_type: Optional[str] = None,
+    category: Optional[str] = None,
+    status: str = "PENDING",
+) -> int:
+    filters = ["status = :status"]
+    params: dict = {"status": status}
+
+    if food_type and food_type.strip().lower() not in ("all", "all specimens", "none", ""):
+        filters.append("(food_type = :food_type OR commodity = :food_type)")
+        params["food_type"] = food_type.strip().lower()
+
+    if category and category.strip().lower() not in ("all", "all categories", "none", ""):
+        filters.append("category = :category")
+        params["category"] = category.strip()
+
+    where = " AND ".join(filters)
     with db_context() as conn:
         row = conn.execute(
-            "SELECT COUNT(*) as cnt FROM predictions WHERE food_type = ? AND status = ?",
-            (food_type, status)
+            f"SELECT COUNT(*) as cnt FROM predictions WHERE {where}",
+            params
         ).fetchone()
     return row["cnt"] if row else 0
 
@@ -380,7 +464,8 @@ def save_verification(
 
         insert_sql = """
         INSERT INTO verified_predictions (
-            prediction_id, verified_at, tomato_id, position, timestamp,
+            prediction_id, verified_at, food_type, commodity, specimen_id,
+            tomato_id, position, timestamp,
             blue, green, yellow, orange, red, nir,
             ndvi, gndvi, rvi,
             freshness_score, predicted_category,
@@ -388,7 +473,8 @@ def save_verification(
             actual_category, actual_freshness_score, verified_by, notes,
             model_version, input_source, status
         ) VALUES (
-            :prediction_id, datetime('now'), :tomato_id, :position, :timestamp,
+            :prediction_id, datetime('now'), :food_type, :commodity, :specimen_id,
+            :tomato_id, :position, :timestamp,
             :blue, :green, :yellow, :orange, :red, :nir,
             :ndvi, :gndvi, :rvi,
             :freshness_score, :predicted_category,
@@ -397,8 +483,15 @@ def save_verification(
             :model_version, :input_source, 'ACTIVE'
         )
         """
+        comm = pred.get("commodity") or pred.get("food_type") or "tomato"
+        spec_id = pred.get("specimen_id") or f"{comm[:3].upper()}-{pred.get('tomato_id') or 1001}"
+        model_ver = pred.get("model_version") or f"XGB_{comm}_v1.0"
+
         verified_data = {
             "prediction_id":          prediction_id,
+            "food_type":              comm,
+            "commodity":              comm,
+            "specimen_id":            spec_id,
             "tomato_id":              pred.get("tomato_id"),
             "position":               pred.get("position"),
             "timestamp":              pred.get("timestamp"),
@@ -420,7 +513,7 @@ def save_verification(
             "actual_freshness_score": score,
             "verified_by":            verified_by,
             "notes":                  notes,
-            "model_version":          pred.get("model_version"),
+            "model_version":          model_ver,
             "input_source":           pred.get("input_source", "manual"),
         }
         cursor = conn.execute(insert_sql, verified_data)
@@ -441,80 +534,134 @@ def save_verification(
         return v_id
 
 
-def get_verification_stats() -> dict:
-    """Returns dynamic statistics calculated directly from SQLite active verified records."""
+def get_verification_stats(food_type: Optional[str] = None) -> dict:
+    """Returns dynamic statistics calculated directly from SQLite active verified records.
+    Supports filtering by specimen/commodity or returning overall aggregates.
+    """
+    filters = ["status = 'ACTIVE'"]
+    params = {}
+    if food_type and food_type.strip().lower() not in ("all", "all specimens", "none", ""):
+        filters.append("(commodity = :food_type OR food_type = :food_type)")
+        params["food_type"] = food_type.strip().lower()
+
+    where_clause = " AND ".join(filters)
+
     with db_context() as conn:
-        total = conn.execute("SELECT COUNT(*) as cnt FROM verified_predictions WHERE status = 'ACTIVE'").fetchone()["cnt"]
-        dist_rows = conn.execute("""
+        total = conn.execute(f"SELECT COUNT(*) as cnt FROM verified_predictions WHERE {where_clause}", params).fetchone()["cnt"]
+        dist_rows = conn.execute(f"""
             SELECT actual_category, COUNT(*) as cnt
             FROM verified_predictions
-            WHERE status = 'ACTIVE'
+            WHERE {where_clause}
             GROUP BY actual_category
+        """, params).fetchall()
+
+        # Also compute commodity breakdown across all active verified records
+        comm_rows = conn.execute("""
+            SELECT COALESCE(commodity, food_type, 'tomato') as comm, COUNT(*) as cnt
+            FROM verified_predictions
+            WHERE status = 'ACTIVE'
+            GROUP BY COALESCE(commodity, food_type, 'tomato')
         """).fetchall()
 
     dist = {r["actual_category"]: r["cnt"] for r in dist_rows}
     fresh = dist.get("Fresh", 0)
     aging = dist.get("Aging", 0)
     spoiling = dist.get("Spoiling", 0)
+    comm_dist = {r["comm"]: r["cnt"] for r in comm_rows}
 
     return {
         "total_audited_samples": total,
         "fresh_count": fresh,
         "aging_count": aging,
         "spoiling_count": spoiling,
+        "commodity_distribution": comm_dist,
         "retraining_readiness": total >= 10,
         "remaining_samples_required": max(0, 10 - total),
     }
 
 
-def get_verified_predictions_active() -> list[dict]:
-    """Returns all active (unarchived) verified records from SQLite for audit and retraining."""
+def get_verified_predictions_active(
+    food_type: Optional[str] = None,
+    category: Optional[str] = None,
+) -> list[dict]:
+    """Returns all active (unarchived) verified records from SQLite for audit and retraining,
+    optionally filtered by specimen/commodity and category.
+    """
+    filters = ["status = 'ACTIVE'"]
+    params = {}
+    if food_type and food_type.strip().lower() not in ("all", "all specimens", "none", ""):
+        filters.append("(commodity = :food_type OR food_type = :food_type)")
+        params["food_type"] = food_type.strip().lower()
+    if category and category.strip().lower() not in ("all", "all categories", "none", ""):
+        filters.append("actual_category = :category")
+        params["category"] = category.strip()
+
+    where_clause = " AND ".join(filters)
     with db_context() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(f"""
             SELECT * FROM verified_predictions
-            WHERE status = 'ACTIVE'
-            ORDER BY verified_at DESC
-        """).fetchall()
+            WHERE {where_clause}
+            ORDER BY verified_at DESC, id DESC
+        """, params).fetchall()
     return [dict(r) for r in rows]
 
 
-def archive_verified_predictions(retraining_run_id: int) -> None:
+def archive_verified_predictions(retraining_run_id: int, food_type: Optional[str] = None) -> None:
     """
     Executed ONLY after a new model has been successfully trained, evaluated,
     saved, load-verified, and set active in production.
-    Archives the current verified training batch and resets active queue to 0.
+    Archives the current verified training batch and resets active queue to 0
+    strictly for the specified commodity so other models retain their active samples.
     """
     with db_context() as conn:
-        conn.execute("""
-            UPDATE verified_predictions
-            SET status = 'RETRAINED', retraining_run_id = ?
-            WHERE status = 'ACTIVE'
-        """, (retraining_run_id,))
+        if food_type and food_type.strip().lower() not in ("all", "all specimens", "none", ""):
+            target = food_type.strip().lower()
+            conn.execute("""
+                UPDATE verified_predictions
+                SET status = 'RETRAINED', retraining_run_id = ?
+                WHERE status = 'ACTIVE' AND (LOWER(commodity) = ? OR LOWER(food_type) = ?)
+            """, (retraining_run_id, target, target))
 
-        conn.execute("""
-            UPDATE predictions
-            SET status = 'RETRAINED'
-            WHERE status = 'VERIFIED'
-        """)
+            conn.execute("""
+                UPDATE predictions
+                SET status = 'RETRAINED'
+                WHERE status = 'VERIFIED' AND (LOWER(commodity) = ? OR LOWER(food_type) = ?)
+            """, (target, target))
+        else:
+            conn.execute("""
+                UPDATE verified_predictions
+                SET status = 'RETRAINED', retraining_run_id = ?
+                WHERE status = 'ACTIVE'
+            """, (retraining_run_id,))
+
+            conn.execute("""
+                UPDATE predictions
+                SET status = 'RETRAINED'
+                WHERE status = 'VERIFIED'
+            """)
 
 
 # ─── Dynamic CSV Export & Snapshots ──────────────────────────────────────────
 
-def generate_verified_dataset_csv() -> str:
+def generate_verified_dataset_csv(food_type: Optional[str] = None) -> str:
     """
     Dynamically generates the verified dataset CSV content directly from SQLite verified_predictions.
-    Includes clean verified timestamps, scan timestamps, spectral bands, indices, predictions,
-    and ground-truth verification labels formatted for Excel and Google Sheets.
+    Supports filtering by particular specimen or generating for all specimens.
+    Includes clean specimen type, specimen ID, spectral bands, indices, predictions,
+    and ground-truth verification labels formatted for Excel, Google Sheets, and ML retraining.
     """
-    active_records = get_verified_predictions_active()
+    target = None if (not food_type or food_type.strip().lower() in ("all", "all specimens", "none", "")) else food_type.strip().lower()
+    active_records = get_verified_predictions_active(food_type=target)
     output = io.StringIO()
     headers = [
         "Verification_ID",
         "Prediction_ID",
-        "Verified_Timestamp",
-        "Scan_Timestamp",
+        "Specimen",
+        "Commodity",
+        "Specimen_ID",
         "Tomato_ID",
         "Position",
+        "Model_Version",
         "Input_Source",
         "Blue",
         "Green",
@@ -534,7 +681,8 @@ def generate_verified_dataset_csv() -> str:
         "Verified_Freshness_Score",
         "Verified_By",
         "Verification_Notes",
-        "Model_Version",
+        "Verified_Timestamp",
+        "Scan_Timestamp",
         "Status",
     ]
     writer = csv.DictWriter(output, fieldnames=headers)
@@ -546,6 +694,8 @@ def generate_verified_dataset_csv() -> str:
         return ts_str.replace("T", " ").split(".")[0]
 
     for r in active_records:
+        comm = r.get("commodity") or r.get("food_type") or "tomato"
+        spec_id = r.get("specimen_id") or f"{comm[:3].upper()}-{r.get('tomato_id') or 1001}"
         blue = r.get("blue") if r.get("blue") is not None else r.get("Blue", 50.0)
         green = r.get("green") if r.get("green") is not None else r.get("Green", 50.0)
         yellow = r.get("yellow") if r.get("yellow") is not None else r.get("Yellow", 50.0)
@@ -572,13 +722,17 @@ def generate_verified_dataset_csv() -> str:
         c_aging = r.get("confidence_aging")
         c_spoil = r.get("confidence_spoiling")
 
+        model_ver = r.get("model_version") or f"XGB_{comm}_v1.0"
+
         writer.writerow({
             "Verification_ID": f"v_{r.get('id')}",
             "Prediction_ID": r.get("prediction_id") or "",
-            "Verified_Timestamp": _format_clean_ts(r.get("verified_at")),
-            "Scan_Timestamp": _format_clean_ts(r.get("timestamp")),
+            "Specimen": comm.replace("_", " ").title(),
+            "Commodity": comm,
+            "Specimen_ID": spec_id,
             "Tomato_ID": r.get("tomato_id") or 1001,
             "Position": r.get("position") or 1,
+            "Model_Version": model_ver,
             "Input_Source": (r.get("input_source") or "usb").upper(),
             "Blue": round(float(blue), 4),
             "Green": round(float(green), 4),
@@ -598,7 +752,8 @@ def generate_verified_dataset_csv() -> str:
             "Verified_Freshness_Score": float(verified_score) if verified_score is not None else 85.0,
             "Verified_By": r.get("verified_by") or "user",
             "Verification_Notes": r.get("notes") or "",
-            "Model_Version": r.get("model_version") or "v1.1",
+            "Verified_Timestamp": _format_clean_ts(r.get("verified_at")),
+            "Scan_Timestamp": _format_clean_ts(r.get("timestamp")),
             "Status": r.get("status") or "ACTIVE",
         })
     return output.getvalue()
@@ -640,6 +795,12 @@ def get_active_model_version(food_type: str = "tomato") -> Optional[dict]:
             row = conn.execute(
                 "SELECT * FROM model_versions WHERE is_active = 1 LIMIT 1"
             ).fetchone()
+        if not row:
+            # Fallback: get model with highest accuracy for this commodity
+            row = conn.execute(
+                "SELECT * FROM model_versions WHERE food_type = ? ORDER BY classification_accuracy DESC, regression_r2 DESC LIMIT 1",
+                (food_type,)
+            ).fetchone()
     return dict(row) if row else None
 
 
@@ -662,6 +823,9 @@ def upsert_model_version(version_data: dict) -> None:
         ON CONFLICT(version) DO UPDATE SET
             classification_accuracy = excluded.classification_accuracy,
             regression_r2           = excluded.regression_r2,
+            mae                     = excluded.mae,
+            rmse                    = excluded.rmse,
+            pkl_path                = excluded.pkl_path,
             is_active               = 1,
             trained_at              = datetime('now')
         """, version_data)
@@ -728,35 +892,61 @@ def delete_model_version_record(version: str, food_type: Optional[str] = None) -
 # ─── Analytics & Retraining Audits ────────────────────────────────────────────
 
 def get_analytics_summary(food_type: str = "tomato") -> dict:
+    target = (food_type or "tomato").strip().lower()
     with db_context() as conn:
-        total = conn.execute(
-            "SELECT COUNT(*) as cnt FROM predictions WHERE food_type = ?", (food_type,)
-        ).fetchone()["cnt"]
+        if target in ("all", "all specimens", "none", "*", ""):
+            total = conn.execute("SELECT COUNT(*) as cnt FROM predictions").fetchone()["cnt"]
 
-        dist = conn.execute("""
-            SELECT category, COUNT(*) as cnt
-            FROM predictions WHERE food_type = ?
-            GROUP BY category
-        """, (food_type,)).fetchall()
+            dist = conn.execute("""
+                SELECT category, COUNT(*) as cnt
+                FROM predictions
+                GROUP BY category
+            """).fetchall()
 
-        avg_row = conn.execute("""
-            SELECT AVG(freshness_score) as avg_score
-            FROM predictions WHERE food_type = ?
-        """, (food_type,)).fetchone()
+            avg_row = conn.execute("""
+                SELECT AVG(freshness_score) as avg_score
+                FROM predictions
+            """).fetchone()
 
-        trend = conn.execute("""
-            SELECT timestamp, freshness_score, category
-            FROM predictions
-            WHERE food_type = ?
-            ORDER BY timestamp DESC
-            LIMIT 50
-        """, (food_type,)).fetchall()
+            trend = conn.execute("""
+                SELECT timestamp, freshness_score, category
+                FROM predictions
+                ORDER BY timestamp DESC
+                LIMIT 50
+            """).fetchall()
+        else:
+            total = conn.execute("""
+                SELECT COUNT(*) as cnt FROM predictions 
+                WHERE (LOWER(food_type) = LOWER(?) OR LOWER(commodity) = LOWER(?))
+            """, (target, target)).fetchone()["cnt"]
+
+            dist = conn.execute("""
+                SELECT category, COUNT(*) as cnt
+                FROM predictions 
+                WHERE (LOWER(food_type) = LOWER(?) OR LOWER(commodity) = LOWER(?))
+                GROUP BY category
+            """, (target, target)).fetchall()
+
+            avg_row = conn.execute("""
+                SELECT AVG(freshness_score) as avg_score
+                FROM predictions 
+                WHERE (LOWER(food_type) = LOWER(?) OR LOWER(commodity) = LOWER(?))
+            """, (target, target)).fetchone()
+
+            trend = conn.execute("""
+                SELECT timestamp, freshness_score, category
+                FROM predictions
+                WHERE (LOWER(food_type) = LOWER(?) OR LOWER(commodity) = LOWER(?))
+                ORDER BY timestamp DESC
+                LIMIT 50
+            """, (target, target)).fetchall()
 
     category_dist = {r["category"]: r["cnt"] for r in dist}
+    avg_score = avg_row["avg_score"] if (avg_row and avg_row["avg_score"] is not None) else 0.0
     return {
         "total_predictions": total,
         "category_distribution": category_dist,
-        "average_freshness_score": round(avg_row["avg_score"] or 0, 2),
+        "average_freshness_score": round(avg_score, 2),
         "fresh_count":    category_dist.get("Fresh", 0),
         "aging_count":    category_dist.get("Aging", 0),
         "spoiling_count": category_dist.get("Spoiling", 0),
@@ -806,7 +996,7 @@ def log_retraining_run(data: dict) -> int:
 # ─── CSV Backup Helpers ───────────────────────────────────────────────────────
 
 _PREDICTION_CSV_HEADERS = [
-    "id", "timestamp", "food_type", "tomato_id", "position",
+    "id", "timestamp", "food_type", "commodity", "specimen_id", "tomato_id", "position",
     "blue", "green", "yellow", "orange", "red", "nir",
     "ndvi", "gndvi", "rvi",
     "freshness_score", "category",
@@ -815,7 +1005,7 @@ _PREDICTION_CSV_HEADERS = [
 ]
 
 _VERIFIED_CSV_HEADERS = [
-    "id", "timestamp", "food_type", "tomato_id", "position",
+    "id", "timestamp", "food_type", "commodity", "specimen_id", "tomato_id", "position",
     "blue", "green", "yellow", "orange", "red", "nir",
     "ndvi", "gndvi", "rvi",
     "freshness_score", "category",
