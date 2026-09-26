@@ -142,7 +142,7 @@ export default function TomatoScene() {
         {/* ─── LEFT SIDE CARDS ─────────────────────────────────────────────────── */}
 
         {/* 1. MODEL CARD */}
-        <div className="absolute top-2 left-2 z-20 bg-white/95 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-44 backdrop-blur-md shadow-sm dark:shadow-lg hover:border-emerald-400 dark:hover:border-[rgba(0,255,180,0.4)] transition-all">
+        <div className="absolute top-2 left-2 z-20 bg-slate-50/90 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200/90 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-44 backdrop-blur-md shadow-xs dark:shadow-lg hover:border-emerald-400 dark:hover:border-[rgba(0,255,180,0.4)] transition-all">
           <div className="flex items-center gap-1.5 mb-1 text-emerald-600 dark:text-[#00FF88]">
             <Cpu size={14} />
             <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">MODEL</span>
@@ -152,7 +152,7 @@ export default function TomatoScene() {
         </div>
 
         {/* 2. VERSION CARD */}
-        <div className="absolute top-36 left-2 z-20 bg-white/95 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-44 backdrop-blur-md shadow-sm dark:shadow-lg hover:border-emerald-400 dark:hover:border-[rgba(0,255,180,0.4)] transition-all">
+        <div className="absolute top-36 left-2 z-20 bg-slate-50/90 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200/90 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-44 backdrop-blur-md shadow-xs dark:shadow-lg hover:border-emerald-400 dark:hover:border-[rgba(0,255,180,0.4)] transition-all">
           <div className="flex items-center gap-1.5 mb-1 text-emerald-600 dark:text-[#00FF88]">
             <Layers size={14} />
             <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">VERSION</span>
@@ -162,7 +162,7 @@ export default function TomatoScene() {
         </div>
 
         {/* 3. FRESHNESS SCORE CARD (BOTTOM LEFT) */}
-        <div className="absolute bottom-2 left-2 z-20 bg-white/95 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-44 backdrop-blur-md shadow-sm dark:shadow-lg hover:border-emerald-400 transition-all">
+        <div className="absolute bottom-2 left-2 z-20 bg-slate-50/90 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200/90 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-44 backdrop-blur-md shadow-xs dark:shadow-lg hover:border-emerald-400 transition-all">
           <div className="flex items-center gap-1.5 mb-1 text-emerald-600 dark:text-[#00FF88]">
             <Leaf size={14} />
             <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">FRESHNESS SCORE</span>
@@ -171,7 +171,7 @@ export default function TomatoScene() {
             98.42 <span className="text-xs font-normal text-slate-500 dark:text-slate-400">/100</span>
           </div>
           {/* Green Progress Bar */}
-          <div className="w-full bg-slate-100 dark:bg-[#070B12] h-1.5 rounded-full mt-2 overflow-hidden border border-slate-200 dark:border-[rgba(0,255,180,0.12)]">
+          <div className="w-full bg-slate-200/80 dark:bg-[#070B12] h-1.5 rounded-full mt-2 overflow-hidden border border-slate-200 dark:border-[rgba(0,255,180,0.12)]">
             <div className="bg-emerald-500 dark:bg-[#00FF88] h-full rounded-full w-[98.42%] shadow-[0_0_8px_#10B981]" />
           </div>
         </div>
@@ -179,7 +179,7 @@ export default function TomatoScene() {
         {/* ─── RIGHT SIDE CARDS ────────────────────────────────────────────────── */}
 
         {/* 4. ACCURACY CARD */}
-        <div className="absolute top-2 right-2 z-20 bg-white/95 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-44 backdrop-blur-md shadow-sm dark:shadow-lg hover:border-emerald-400 transition-all text-right">
+        <div className="absolute top-2 right-2 z-20 bg-slate-50/90 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200/90 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-44 backdrop-blur-md shadow-xs dark:shadow-lg hover:border-emerald-400 transition-all text-right">
           <div className="flex items-center justify-end gap-1.5 mb-1 text-emerald-600 dark:text-[#00FF88]">
             <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">ACCURACY</span>
             <Target size={14} />
@@ -189,7 +189,7 @@ export default function TomatoScene() {
         </div>
 
         {/* 5. R² SCORE CARD */}
-        <div className="absolute top-36 right-2 z-20 bg-white/95 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-44 backdrop-blur-md shadow-sm dark:shadow-lg hover:border-emerald-400 transition-all text-right">
+        <div className="absolute top-36 right-2 z-20 bg-slate-50/90 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200/90 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-44 backdrop-blur-md shadow-xs dark:shadow-lg hover:border-emerald-400 transition-all text-right">
           <div className="flex items-center justify-end gap-1.5 mb-1 text-emerald-600 dark:text-[#00FF88]">
             <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">R² SCORE</span>
             <TrendingUp size={14} />
@@ -199,7 +199,7 @@ export default function TomatoScene() {
         </div>
 
         {/* 6. CATEGORY CARD (BOTTOM RIGHT) */}
-        <div className="absolute bottom-2 right-2 z-20 bg-white/95 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-44 backdrop-blur-md shadow-sm dark:shadow-lg hover:border-emerald-400 transition-all text-right">
+        <div className="absolute bottom-2 right-2 z-20 bg-slate-50/90 dark:bg-[rgba(15,20,30,0.65)] border border-slate-200/90 dark:border-[rgba(0,255,180,0.15)] rounded-xl p-3.5 w-44 backdrop-blur-md shadow-xs dark:shadow-lg hover:border-emerald-400 transition-all text-right">
           <div className="flex items-center justify-end gap-1.5 mb-1 text-emerald-600 dark:text-[#00FF88]">
             <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">CATEGORY</span>
             <Compass size={14} />
@@ -267,7 +267,7 @@ export default function TomatoScene() {
         {/* ─── BOTTOM CENTER: STATUS & CONFIDENCE CARDS ───────────────────────── */}
         <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5">
           {/* STATUS CARD */}
-          <div className="bg-white/95 dark:bg-[rgba(15,20,30,0.7)] border border-emerald-400/30 dark:border-[rgba(0,255,180,0.25)] rounded-xl px-4 py-1.5 text-center backdrop-blur-md shadow-xs min-w-[130px]">
+          <div className="bg-slate-50/95 dark:bg-[rgba(15,20,30,0.7)] border border-emerald-500/30 dark:border-[rgba(0,255,180,0.25)] rounded-xl px-4 py-1.5 text-center backdrop-blur-md shadow-xs min-w-[130px]">
             <div className="flex items-center justify-center gap-1 text-emerald-600 dark:text-[#00FF88] mb-0.5">
               <ShieldCheck size={12} />
               <span className="text-[8px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">STATUS</span>
@@ -277,7 +277,7 @@ export default function TomatoScene() {
           </div>
 
           {/* CONFIDENCE CARD */}
-          <div className="bg-white/95 dark:bg-[rgba(15,20,30,0.7)] border border-sky-400/30 dark:border-[rgba(0,255,180,0.15)] rounded-xl px-4 py-1 text-center backdrop-blur-md shadow-xs min-w-[130px]">
+          <div className="bg-slate-50/95 dark:bg-[rgba(15,20,30,0.7)] border border-sky-500/30 dark:border-[rgba(0,255,180,0.15)] rounded-xl px-4 py-1 text-center backdrop-blur-md shadow-xs min-w-[130px]">
             <div className="flex items-center justify-center gap-1 text-sky-600 dark:text-[#00E5FF] mb-0.5">
               <Activity size={11} />
               <span className="text-[8px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">CONFIDENCE</span>

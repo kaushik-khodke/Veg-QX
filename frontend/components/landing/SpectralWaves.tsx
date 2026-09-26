@@ -1,20 +1,23 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 const spectralBands = [
-  { name: "BLUE", wavelength: "450nm", color: "#3B82F6", freq: 0.009, amp: 32, phase: 0.0, speed: 0.12, depth: 0.75, offsetRatio: -0.08 },
-  { name: "GREEN", wavelength: "530nm", color: "#10B981", freq: 0.011, amp: 28, phase: 1.05, speed: 0.10, depth: 1.10, offsetRatio: -0.03 },
-  { name: "YELLOW", wavelength: "590nm", color: "#EAB308", freq: 0.008, amp: 24, phase: 2.10, speed: 0.08, depth: 0.85, offsetRatio: 0.03 },
-  { name: "ORANGE", wavelength: "630nm", color: "#F97316", freq: 0.012, amp: 30, phase: 3.14, speed: 0.14, depth: 1.25, offsetRatio: 0.08 },
-  { name: "RED", wavelength: "670nm", color: "#EF4444", freq: 0.009, amp: 26, phase: 4.18, speed: 0.09, depth: 0.95, offsetRatio: 0.10 },
-  { name: "NIR", wavelength: "850nm", color: "#B56EFF", freq: 0.011, amp: 34, phase: 5.23, speed: 0.15, depth: 1.35, offsetRatio: -0.05 },
+  { name: "BLUE", wavelength: "450nm", color: "#3B82F6", lightColor: "#2563EB", freq: 0.009, amp: 32, phase: 0.0, speed: 0.12, depth: 0.75, offsetRatio: -0.08 },
+  { name: "GREEN", wavelength: "530nm", color: "#10B981", lightColor: "#059669", freq: 0.011, amp: 28, phase: 1.05, speed: 0.10, depth: 1.10, offsetRatio: -0.03 },
+  { name: "YELLOW", wavelength: "590nm", color: "#EAB308", lightColor: "#B45309", freq: 0.008, amp: 24, phase: 2.10, speed: 0.08, depth: 0.85, offsetRatio: 0.03 },
+  { name: "ORANGE", wavelength: "630nm", color: "#F97316", lightColor: "#C2410C", freq: 0.012, amp: 30, phase: 3.14, speed: 0.14, depth: 1.25, offsetRatio: 0.08 },
+  { name: "RED", wavelength: "670nm", color: "#EF4444", lightColor: "#DC2626", freq: 0.009, amp: 26, phase: 4.18, speed: 0.09, depth: 0.95, offsetRatio: 0.10 },
+  { name: "NIR", wavelength: "850nm", color: "#B56EFF", lightColor: "#7C3AED", freq: 0.011, amp: 34, phase: 5.23, speed: 0.15, depth: 1.35, offsetRatio: -0.05 },
 ];
 
 export default function SpectralWaves() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [isVisible, setIsVisible] = useState(true);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   // Viewport observer
   useEffect(() => {
@@ -53,7 +56,7 @@ export default function SpectralWaves() {
       ctx.clearRect(0, 0, width, height);
 
       // ─── 1. Background Grid & Axis Lines ─────────────────────────────────
-      ctx.strokeStyle = "rgba(0, 255, 180, 0.07)";
+      ctx.strokeStyle = isDark ? "rgba(0, 255, 180, 0.08)" : "rgba(15, 23, 42, 0.07)";
       ctx.lineWidth = 1;
 
       const gridSpacingX = width / 14;
@@ -76,7 +79,7 @@ export default function SpectralWaves() {
       ctx.setLineDash([]); // Reset line dash
 
       // Baseline center axis
-      ctx.strokeStyle = "rgba(0, 229, 255, 0.2)";
+      ctx.strokeStyle = isDark ? "rgba(0, 229, 255, 0.25)" : "rgba(16, 185, 129, 0.25)";
       ctx.beginPath();
       ctx.moveTo(0, height * 0.5);
       ctx.lineTo(width, height * 0.5);
@@ -95,14 +98,15 @@ export default function SpectralWaves() {
 
         // Parallax depth calculations
         const depthScale = Math.max(0.5, Math.min(1.4, band.dynamicDepth));
-        const alpha = 0.55 + (depthScale - 0.5) * 0.4; // 0.55 to 0.95 opacity
-        const lineWidth = 1.8 * depthScale; // Thicker lines in foreground
-        const shadowBlur = Math.round(7 * depthScale); // Deeper glow in foreground
+        const alpha = isDark ? 0.55 + (depthScale - 0.5) * 0.4 : 0.75 + (depthScale - 0.5) * 0.25;
+        const lineWidth = (isDark ? 1.8 : 2.2) * depthScale;
+        const shadowBlur = isDark ? Math.round(7 * depthScale) : Math.round(3 * depthScale);
+        const activeColor = isDark ? band.color : band.lightColor;
 
-        ctx.strokeStyle = band.color;
-        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = activeColor;
+        ctx.globalAlpha = Math.min(1, alpha);
         ctx.lineWidth = lineWidth;
-        ctx.shadowColor = band.color;
+        ctx.shadowColor = activeColor;
         ctx.shadowBlur = shadowBlur;
 
         ctx.beginPath();
@@ -145,7 +149,7 @@ export default function SpectralWaves() {
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isVisible]);
+  }, [isVisible, isDark]);
 
   return (
     <div
@@ -166,7 +170,7 @@ export default function SpectralWaves() {
       </div>
 
       {/* Canvas Oscilloscope Display */}
-      <div className="relative w-full h-[150px] rounded-xl overflow-hidden bg-slate-950 dark:bg-[#050810] border border-slate-300 dark:border-[rgba(0,255,180,0.12)] shadow-inner flex items-center justify-center">
+      <div className="relative w-full h-[150px] rounded-xl overflow-hidden bg-slate-50/90 dark:bg-[#050810] border border-slate-200 dark:border-[rgba(0,255,180,0.12)] shadow-inner flex items-center justify-center transition-colors duration-200">
         <canvas
           ref={canvasRef}
           width={800}
@@ -179,7 +183,10 @@ export default function SpectralWaves() {
       <div className="grid grid-cols-6 gap-2 pt-3 border-t border-slate-200 dark:border-[rgba(0,255,180,0.12)] text-center z-10">
         {spectralBands.map((band) => (
           <div key={band.name} className="flex flex-col items-center">
-            <span className="text-[10px] font-bold tracking-widest" style={{ color: band.color }}>
+            <span 
+              className="text-[10px] font-bold tracking-widest font-mono transition-colors" 
+              style={{ color: isDark ? band.color : band.lightColor }}
+            >
               {band.name}
             </span>
             <span className="text-[9px] text-slate-500 dark:text-slate-400 tracking-wider block font-mono mt-0.5">

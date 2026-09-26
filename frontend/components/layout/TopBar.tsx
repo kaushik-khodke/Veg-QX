@@ -75,40 +75,39 @@ export default function TopBar({ isSidebarOpen = true, onToggleSidebar }: TopBar
   }, [commodity]);
 
   return (
-    <header className="relative h-16 bg-white/90 dark:bg-[#050814]/80 border-b border-slate-200 dark:border-slate-850 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-40 text-slate-700 dark:text-slate-300 font-mono shadow-sm transition-colors duration-200">
-      {/* Left Section: Navigation Toggle (when sidebar closed) + Live Mission Clock */}
-      <div className="flex items-center gap-3 z-10">
+    <header className="h-16 bg-white/90 dark:bg-[#050814]/80 border-b border-slate-200 dark:border-slate-850 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40 text-slate-700 dark:text-slate-300 font-mono shadow-sm transition-colors duration-200 box-border">
+      {/* Left Section: Navigation Toggle + Mission Clock + Target Commodity Badge */}
+      <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
         {!isSidebarOpen && onToggleSidebar && (
           <button
             onClick={onToggleSidebar}
             suppressHydrationWarning
-            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg text-emerald-600 dark:text-emerald-400 hover:text-slate-900 dark:hover:text-white transition-all flex items-center justify-center border border-slate-200 dark:border-slate-800 shadow-xs"
+            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg text-emerald-600 dark:text-emerald-400 hover:text-slate-900 dark:hover:text-white transition-all flex items-center justify-center border border-slate-200 dark:border-slate-850 shadow-xs"
             title="Open Navigation Panel"
           >
             <Menu size={16} />
           </button>
         )}
-        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 px-3 py-1.5 rounded-lg text-[10px] text-slate-500 dark:text-slate-400 shadow-xs">
+        <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-850 px-2.5 py-1.5 rounded-lg text-[10px] text-slate-500 dark:text-slate-400 shadow-xs">
           <Clock size={13} className="text-sky-600 dark:text-sky-400" />
           <span className="text-slate-700 dark:text-slate-300 font-semibold">{missionTime || "CALIBRATING TIME..."}</span>
         </div>
+
+        <div className="hidden sm:flex items-center gap-1.5 bg-slate-50 dark:bg-[#0B1020] border border-slate-200 dark:border-slate-850 px-2.5 py-1.5 rounded-lg text-[10px] tracking-wider text-slate-600 dark:text-slate-400 shadow-xs">
+          <span className="text-slate-400 dark:text-slate-500 font-semibold">TARGET:</span>
+          <span className="text-emerald-600 dark:text-emerald-400 font-bold uppercase">{commodity.replace("_", " ")}</span>
+          <span className="hidden 2xl:inline text-slate-300 dark:text-slate-700">|</span>
+          <span className="hidden 2xl:inline text-slate-400 dark:text-slate-500 font-semibold">SAMPLE:</span>
+          <span className="hidden 2xl:inline text-sky-600 dark:text-cyan-400 font-bold">
+            SCAN-{commodity.toUpperCase().slice(0, 3)}-1.0
+          </span>
+        </div>
       </div>
 
-      {/* Centerpiece Active Commodity & Sample ID — Perfectly Centered Symmetrically */}
-      <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center gap-2 bg-slate-50 dark:bg-[#0B1020] border border-slate-200 dark:border-slate-800 px-3.5 py-1.5 rounded-lg text-[10px] tracking-wider text-slate-600 dark:text-slate-400 shadow-xs pointer-events-none select-none">
-        <span className="text-slate-400 dark:text-slate-500 font-semibold">TARGET:</span>
-        <span className="text-emerald-600 dark:text-emerald-400 font-bold uppercase">{commodity.replace("_", " ")}</span>
-        <span className="text-slate-300 dark:text-slate-700">|</span>
-        <span className="text-slate-400 dark:text-slate-500 font-semibold">SAMPLE:</span>
-        <span className="text-sky-700 dark:text-cyan-400 font-bold">
-          SCAN-{commodity.toUpperCase()}-{(status.model_version?.replace("v", "") || "1.0")}
-        </span>
-      </div>
-
-      {/* Status Badges Grid + Theme Switcher */}
-      <div className="flex items-center gap-2.5 text-[10px] z-10">
-        {/* Connection Latency */}
-        <div className="hidden sm:flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800 shadow-xs">
+      {/* Right Section: Telemetry Badges Grid + Theme Switcher (Guaranteed Visible) */}
+      <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] shrink-0">
+        {/* Connection Latency (visible only on ultra-wide screens) */}
+        <div className="hidden 2xl:flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-850 shadow-xs">
           <span className="text-slate-400 dark:text-slate-500 font-medium">LATENCY:</span>
           <span className="text-sky-600 dark:text-sky-400 font-bold">
             {status.database_connected ? "112 ms" : "---"}
@@ -116,33 +115,33 @@ export default function TopBar({ isSidebarOpen = true, onToggleSidebar }: TopBar
         </div>
 
         {/* Database Connected */}
-        <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-850 shadow-xs">
           <span
             className={`w-1.5 h-1.5 rounded-full ${
               status.database_connected ? "bg-emerald-500 shadow-[0_0_6px_#10B981] animate-pulse" : "bg-red-500 animate-pulse"
             }`}
           />
           <span className="text-slate-400 dark:text-slate-500 font-medium">DB:</span>
-          <span className={status.database_connected ? "text-emerald-700 dark:text-emerald-400 font-bold" : "text-red-600 dark:text-red-400 font-bold"}>
+          <span className={status.database_connected ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-red-500 font-bold"}>
             {status.database_connected ? "CONNECTED" : "OFFLINE"}
           </span>
         </div>
 
         {/* Model Loaded */}
-        <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-850 shadow-xs">
           <span
             className={`w-1.5 h-1.5 rounded-full ${
               status.model_loaded ? "bg-emerald-500 shadow-[0_0_6px_#10B981]" : "bg-red-500"
             }`}
           />
           <span className="text-slate-400 dark:text-slate-500 font-medium">MODEL:</span>
-          <span className={status.model_loaded ? "text-emerald-700 dark:text-emerald-400 font-bold" : "text-red-600 dark:text-red-400 font-bold"}>
-            {status.model_loaded ? `LOADED (${status.active_model || status.model_version || "unknown"})` : "UNLOADED"}
+          <span className={status.model_loaded ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-red-500 font-bold"}>
+            {status.model_loaded ? (status.active_model || status.model_version || "ONLINE") : "UNLOADED"}
           </span>
         </div>
 
         {/* USB Connected */}
-        <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="hidden md:flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-850 shadow-xs">
           <span
             className={`w-1.5 h-1.5 rounded-full ${
               status.usb_connected
@@ -156,33 +155,27 @@ export default function TopBar({ isSidebarOpen = true, onToggleSidebar }: TopBar
           <span
             className={
               status.usb_connected
-                ? "text-emerald-700 dark:text-emerald-400 font-bold"
+                ? "text-emerald-600 dark:text-emerald-400 font-bold"
                 : status.esp32_detected
-                ? "text-amber-700 dark:text-amber-400 font-bold"
-                : "text-red-600 dark:text-red-400 font-bold"
+                ? "text-amber-600 dark:text-amber-400 font-bold"
+                : "text-red-500 font-bold"
             }
           >
-            {status.usb_connected
-              ? `CONNECTED (${status.usb_port})`
-              : status.esp32_detected
-              ? `DETECTED (${status.usb_port || "Plugged"})`
-              : "INACTIVE"}
+            {status.usb_port || (status.usb_connected ? "CONNECTED" : "INACTIVE")}
           </span>
         </div>
 
-        {/* Refresh Status */}
-        <button
-          onClick={fetchStatus}
-          disabled={loading}
-          suppressHydrationWarning
-          className="text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs"
-          title="Refresh System Status"
-        >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-        </button>
-
-        {/* Theme Toggle Button */}
-        <div className="pl-1 border-l border-slate-200 dark:border-slate-800">
+        {/* Actions (Refresh + ThemeToggle) — Pinned and Always Visible */}
+        <div className="flex items-center gap-1.5 shrink-0 pl-1.5 border-l border-slate-200 dark:border-slate-850">
+          <button
+            onClick={fetchStatus}
+            disabled={loading}
+            suppressHydrationWarning
+            className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-850 shadow-xs transition-colors flex items-center justify-center"
+            title="Refresh System Status"
+          >
+            <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+          </button>
           <ThemeToggle />
         </div>
       </div>

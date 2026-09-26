@@ -8,25 +8,21 @@ export default function SidebarAndMainWrapper({ children }: { children: React.Re
   const [isOpen, setIsOpen] = useState(true);
 
   return (
-    <div className="flex min-h-screen w-full relative overflow-x-hidden bg-[var(--bg-primary)] transition-colors duration-200">
-      {/* Sidebar Container — 100% Fixed & Viewport-Pinned */}
+    <div className="flex h-screen w-full relative overflow-hidden bg-[var(--bg-primary)] transition-colors duration-200">
+      {/* Sidebar Container — Pinned to Left */}
       <div 
-        className={`transition-all duration-300 ease-in-out z-40 fixed top-0 left-0 h-screen ${
+        className={`transition-all duration-300 ease-in-out z-40 h-screen shrink-0 ${
           isOpen ? "w-64 font-sans opacity-100" : "w-0 opacity-0 overflow-hidden pointer-events-none"
         }`}
       >
         <Sidebar isOpen={isOpen} onClose={() => setIsOpen(false)} />
       </div>
 
-      {/* Main Content Area — Dynamic Left Margin for Fixed Sidebar */}
-      <div 
-        className={`flex-1 flex flex-col min-h-screen min-w-0 transition-all duration-300 ${
-          isOpen ? "ml-64" : "ml-0"
-        }`}
-      >
+      {/* Main Content Area — TopBar pinned at top, main container scrolls smoothly */}
+      <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden">
         <TopBar isSidebarOpen={isOpen} onToggleSidebar={() => setIsOpen(!isOpen)} />
-        <main className="flex-1 p-6 relative">
-          <div className="max-w-7xl mx-auto w-full">
+        <main className="flex-1 p-6 relative overflow-y-auto">
+          <div className="max-w-7xl mx-auto w-full pb-10">
             {children}
           </div>
         </main>

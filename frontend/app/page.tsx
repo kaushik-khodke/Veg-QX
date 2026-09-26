@@ -85,7 +85,7 @@ export default function LandingPage() {
           </div>
 
           {/* Spacecraft Mission Status Card */}
-          <div className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0B1020] rounded-2xl p-4 font-mono text-[10px] text-slate-600 dark:text-slate-400 flex flex-col justify-between h-[185px] shadow-sm dark:shadow-lg transition-colors duration-200">
+          <div className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#070B12] rounded-2xl p-4 font-mono text-[10px] text-slate-600 dark:text-slate-400 flex flex-col justify-between h-[185px] shadow-sm dark:shadow-lg transition-colors duration-200">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-2 mb-1">
               <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">
                 Spacecraft Mission Status
@@ -127,7 +127,7 @@ export default function LandingPage() {
           </div>
 
           {/* Mission Console Terminal Card */}
-          <div className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0B1020] rounded-2xl p-4 flex flex-col justify-between h-[360px] shadow-sm dark:shadow-lg transition-colors duration-200">
+          <div className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#070B12] rounded-2xl p-4 flex flex-col justify-between h-[360px] shadow-sm dark:shadow-lg transition-colors duration-200">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-2 mb-2 font-mono">
               <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">
                 Mission Console Terminal
@@ -135,10 +135,10 @@ export default function LandingPage() {
               <TerminalIcon size={14} className="text-sky-600 dark:text-sky-400 animate-pulse" />
             </div>
 
-            {/* Logs Window */}
+            {/* Logs Inset Window */}
             <div 
               ref={scrollContainerRef}
-              className="flex-1 overflow-y-auto font-mono text-[9.5px] text-slate-600 dark:text-slate-400 space-y-1.5 pr-1 scrollbar-thin"
+              className="flex-1 overflow-y-auto font-mono text-[9.5px] bg-slate-50/90 dark:bg-[#050810]/70 border border-slate-200/90 dark:border-slate-800/80 rounded-xl p-2.5 space-y-1.5 scrollbar-thin shadow-inner"
             >
               {logs.length === 0 ? (
                 <div className="text-slate-400 dark:text-slate-600 animate-pulse">[ AWAITING SENSOR TELEMETRY STREAM... ]</div>
@@ -146,7 +146,7 @@ export default function LandingPage() {
                 logs.map((log, index) => (
                   <div key={index} className="leading-relaxed">
                     <span className="text-slate-400 dark:text-slate-500 font-semibold">{log.substring(0, 10)}</span>
-                    <span className={log.includes("Classification") || log.includes("Score") || log.includes("FRESH") ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-slate-700 dark:text-slate-300"}>
+                    <span className={log.includes("Classification") || log.includes("Score") || log.includes("FRESH") ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-slate-800 dark:text-slate-200"}>
                       {log.substring(10)}
                     </span>
                   </div>

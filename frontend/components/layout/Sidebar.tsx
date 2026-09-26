@@ -101,15 +101,15 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
   return (
     <aside className="w-64 bg-white dark:bg-slate-950/80 border-r border-slate-200 dark:border-slate-850 backdrop-blur-xl flex flex-col h-full text-slate-700 dark:text-slate-300 shadow-sm transition-colors duration-200">
-      {/* Brand Header */}
-      <div className="p-4 border-b border-slate-200 dark:border-slate-850 flex items-center justify-between">
+      {/* Brand Header — Aligned to exactly h-16 (64px) for 100% linear symmetry with TopBar */}
+      <div className="h-16 px-4 border-b border-slate-200 dark:border-slate-850 flex items-center justify-between box-border shrink-0">
         <div className="flex items-center gap-3">
           <img
             src="/voyage_robotics_logo.png"
             alt="Voyage Robotics Logo"
-            width={36}
-            height={36}
-            className="w-9 h-9 object-contain filter drop-shadow-[0_0_8px_rgba(16,185,129,0.25)]"
+            width={32}
+            height={32}
+            className="w-8 h-8 object-contain filter drop-shadow-[0_0_8px_rgba(16,185,129,0.25)]"
             onError={(e) => {
               (e.target as HTMLElement).style.display = 'none';
             }}
