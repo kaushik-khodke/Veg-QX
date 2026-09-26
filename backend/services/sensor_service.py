@@ -121,20 +121,33 @@ class SensorService:
         self.last_raw_line: Optional[str] = None
         self.parser_error_count: int = 0
 
+        # Port Cache to eliminate Windows Hardware Registry polling latency
+        self._cached_ports: list[dict] = []
+        self._cached_ports_time: float = 0.0
+        self._cached_raw_ports: list = []
+
     # ─── COM Port Discovery ────────────────────────────────────────────────────
 
-    def list_available_ports(self) -> list[dict]:
-        """Returns all available COM ports with their descriptions."""
+    def list_available_ports(self, force_refresh: bool = False) -> list[dict]:
+        """Returns all available COM ports with caching to avoid repetitive Windows registry queries."""
         if not SERIAL_AVAILABLE:
             return []
+        now = time.time()
+        if not force_refresh and (now - self._cached_ports_time < 3.0) and self._cached_ports:
+            return self._cached_ports
+
         ports = []
-        for p in serial.tools.list_ports.comports():
+        raw_ports = list(serial.tools.list_ports.comports())
+        self._cached_raw_ports = raw_ports
+        for p in raw_ports:
             ports.append({
                 "port":        p.device,
                 "description": p.description,
                 "hwid":        p.hwid,
                 "is_esp32":    self._is_likely_esp32(p),
             })
+        self._cached_ports = ports
+        self._cached_ports_time = now
         return ports
 
     def _is_likely_esp32(self, port_info) -> bool:
@@ -144,10 +157,16 @@ class SensorService:
         return any(k in desc for k in keywords)
 
     def find_esp32_port(self) -> Optional[str]:
-        """Auto-detect the most likely ESP32 COM port dynamically."""
+        """Auto-detect the most likely ESP32 COM port dynamically using cached ports."""
         if not SERIAL_AVAILABLE:
             return None
-        ports = list(serial.tools.list_ports.comports())
+        now = time.time()
+        if (now - self._cached_ports_time < 3.0) and self._cached_raw_ports:
+            ports = self._cached_raw_ports
+        else:
+            self.list_available_ports()
+            ports = self._cached_raw_ports
+
         if not ports:
             return None
 
