@@ -6,6 +6,8 @@ node_modules/
 # Next.js build outputs
 frontend/.next/
 frontend/out/
+*.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
 
 # Python cache and compiled files
 **/__pycache__/
@@ -41,6 +43,7 @@ Thumbs.db
 
 # Machine Learning models (serialized model checkpoints)
 !models/*.pkl
+!models/**/*.pkl
 !models/tomato_freshness_pipeline_v1.1.pkl
 !models/tomato_freshness_pipeline_v1.pkl
 models/*.h5
