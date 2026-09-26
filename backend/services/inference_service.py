@@ -135,6 +135,31 @@ class InferenceService:
         self.metadata      = payload.get("metadata", {})
         self.model_version = self.metadata.get("version", "unknown")
 
+    def get_canonical_model_name(self) -> str:
+        """
+        Returns a clean, standardized canonical model name:
+        e.g. XGB_bitter_gourd_v1.0, XGB_green_brinjal_v1.0, XGB_tomato_v1.1
+        """
+        meta = self.metadata or {}
+        reg_algo = str(meta.get("regressor_algorithm", "XGBoost"))
+        if "LightGBM" in reg_algo:
+            algo_code = "LGBM"
+        elif "HistGradient" in reg_algo:
+            algo_code = "HGB"
+        elif "XGB" in reg_algo:
+            algo_code = "XGB"
+        else:
+            algo_code = "XGB"
+
+        raw_ver = self.model_version or "v1.0"
+        if raw_ver.startswith(f"{algo_code}_"):
+            return raw_ver
+        if raw_ver.startswith(f"{self.food_type}_"):
+            return f"{algo_code}_{raw_ver}"
+        if raw_ver.startswith("v"):
+            return f"{algo_code}_{self.food_type}_{raw_ver}"
+        return f"{algo_code}_{self.food_type}_v{raw_ver}"
+
     def is_loaded(self) -> bool:
         return self.regressor is not None
 
@@ -211,7 +236,7 @@ class InferenceService:
             "NDVI":                 indices["NDVI"],
             "GNDVI":                indices["GNDVI"],
             "RVI":                  indices["RVI"],
-            "model_version":        self.model_version,
+            "model_version":        self.get_canonical_model_name(),
             "is_ood":               is_ood,
             "ood_reasons":          ood_reasons,
         }
@@ -244,13 +269,14 @@ class InferenceService:
         for i, cls in enumerate(classes):
             df[f"confidence_{cls.lower()}"] = probs[:, i].round(4)
 
-        df["model_version"] = self.model_version
+        df["model_version"] = self.get_canonical_model_name()
         return df
 
     def get_model_info(self) -> dict:
         return {
             "food_type":                self.food_type,
-            "model_version":            self.model_version,
+            "model_version":            self.get_canonical_model_name(),
+            "raw_version":              self.model_version,
             "classification_accuracy":  self.metadata.get("classification_accuracy"),
             "regression_r2":            self.metadata.get("regression_r2"),
             "training_samples":         self.metadata.get("dataset_shape", [None])[0],
