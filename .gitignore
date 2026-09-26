@@ -47,6 +47,9 @@ models/*.h5
 models/*.pt
 models/*.onnx
 
+# Local database files
+backend/database/*.db
+
 # Large datasets / Parquet / CSV files
 *.csv
 !Tomato_Multispectral_Realistic_100k.csv
@@ -62,4 +65,9 @@ data/synthetic/
 # Retraining directory
 !retraining/
 !retraining/**
+
+# Temp helper scripts
+rebuild_20.ps1
+scripts_temp_commits.js
+
 
