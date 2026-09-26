@@ -147,12 +147,19 @@ def delete_model_version(
     Currently active models CANNOT be deleted.
     """
     target = commodity or food_type or "tomato"
-    if target == "tomato" and version in ["v1.0", "v1.1"]:
+
+    # Determine if this version is a permanent baseline
+    # Baselines can be stored as "v1.0" or "{commodity}_v1.0" depending on the commodity
+    is_tomato_baseline = (target == "tomato" and version in ["v1.0", "v1.1"])
+    plain_baseline = (version == "v1.0" or version == f"{target}_v1.0" or version.endswith("_v1.0"))
+    is_commodity_baseline = (target != "tomato" and plain_baseline)
+
+    if is_tomato_baseline:
         raise HTTPException(
             status_code=400,
             detail=f"Model version {version} is a permanent system baseline and cannot be deleted."
         )
-    if target != "tomato" and version == "v1.0":
+    if is_commodity_baseline:
         raise HTTPException(
             status_code=400,
             detail=f"Model version {version} for '{target}' is the baseline model and cannot be deleted."
