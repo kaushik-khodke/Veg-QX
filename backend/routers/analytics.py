@@ -93,7 +93,7 @@ def fetch_analytics_dashboard(
         clf_algo = inference_svc.metadata.get("classifier_algorithm") or ("HistGradientBoosting" if "HGB" in canonical_name else "XGBoost")
         reg_algo = inference_svc.metadata.get("regressor_algorithm") or "XGBoost"
         model_version = (active_db_version.get("version") if active_db_version else None) or inference_svc.model_version or "v1.0"
-        training_samples = (active_db_version.get("training_samples") if active_db_version else None) or 100000
+        training_samples = (active_db_version.get("training_samples") if active_db_version else None) or 0
         trained_at = (active_db_version.get("trained_at") if active_db_version else None) or ""
         notes = (active_db_version.get("notes") if active_db_version else None) or ""
 
