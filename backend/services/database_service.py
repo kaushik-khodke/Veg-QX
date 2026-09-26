@@ -864,8 +864,12 @@ def delete_model_version_record(version: str, food_type: Optional[str] = None) -
     v1.0 and v1.1 are protected permanent baselines and cannot be deleted.
     Currently active models cannot be deleted.
     """
-    if version in ["v1.0", "v1.1"]:
-        raise ValueError(f"Model version {version} is a permanent system baseline and cannot be deleted.")
+    target_food = (food_type or "tomato").strip().lower()
+    # Permanent baselines:
+    # Tomato: v1.0 and v1.1
+    # Any commodity: v1.0 or {food_type}_v1.0 or ending with _v1.0
+    if version in ["v1.0", "v1.1"] or (target_food != "tomato" and (version == f"{target_food}_v1.0" or version.endswith("_v1.0"))):
+        raise ValueError(f"Model version '{version}' for '{target_food}' is a permanent system baseline and cannot be deleted.")
 
     with db_context() as conn:
         _migrate_database_schema(conn)
