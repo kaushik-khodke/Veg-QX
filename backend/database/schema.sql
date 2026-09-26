@@ -14,8 +14,10 @@ CREATE TABLE IF NOT EXISTS predictions (
     id                  INTEGER PRIMARY KEY AUTOINCREMENT,
     timestamp           TEXT    NOT NULL DEFAULT (datetime('now')),
     food_type           TEXT    NOT NULL DEFAULT 'tomato',
+    commodity           TEXT    NOT NULL DEFAULT 'tomato',
 
-    -- Tomato identification
+    -- Specimen identification
+    specimen_id         TEXT,
     tomato_id           INTEGER,
     position            INTEGER,
 
@@ -52,6 +54,8 @@ CREATE TABLE IF NOT EXISTS predictions (
 CREATE INDEX IF NOT EXISTS idx_predictions_timestamp  ON predictions(timestamp);
 CREATE INDEX IF NOT EXISTS idx_predictions_tomato_id  ON predictions(tomato_id);
 CREATE INDEX IF NOT EXISTS idx_predictions_food_type  ON predictions(food_type);
+CREATE INDEX IF NOT EXISTS idx_predictions_commodity  ON predictions(commodity);
+CREATE INDEX IF NOT EXISTS idx_predictions_specimen   ON predictions(specimen_id);
 CREATE INDEX IF NOT EXISTS idx_predictions_category   ON predictions(category);
 CREATE INDEX IF NOT EXISTS idx_predictions_status     ON predictions(status);
 
@@ -65,6 +69,9 @@ CREATE TABLE IF NOT EXISTS verified_predictions (
     verified_at             TEXT    NOT NULL DEFAULT (datetime('now')),
     
     -- Identification
+    food_type               TEXT    NOT NULL DEFAULT 'tomato',
+    commodity               TEXT    NOT NULL DEFAULT 'tomato',
+    specimen_id             TEXT,
     tomato_id               INTEGER,
     position                INTEGER,
     timestamp               TEXT,
