@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { ModelVersion } from "@/lib/types";
 import { FOOD_TYPES } from "@/lib/constants";
+import { CommodityIcon } from "@/components/ui/CommodityIcon";
 import { Layers, RefreshCw, CheckCircle2, Trash2, AlertTriangle, ShieldCheck } from "lucide-react";
 
 export default function ModelVersioningPage() {
@@ -59,9 +60,15 @@ export default function ModelVersioningPage() {
     }
   };
 
+  const isPermanentBaseline = (version: string, foodType: string) => {
+    if (foodType === "tomato") {
+      return version === "v1.0" || version === "v1.1";
+    }
+    return version === "v1.0" || version === `${foodType}_v1.0` || version.endsWith("_v1.0");
+  };
+
   const handleStartDelete = (version: string, foodType: string) => {
-    if (foodType === "tomato" && (version === "v1.0" || version === "v1.1")) return;
-    if (foodType !== "tomato" && version === "v1.0") return;
+    if (isPermanentBaseline(version, foodType)) return;
     setDeleteTargetVersion(version);
     setDeleteTargetCommodity(foodType);
     setDeleteConfirmStep(1);
@@ -157,7 +164,7 @@ export default function ModelVersioningPage() {
                 : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
-            <span>{f.icon}</span>
+            <CommodityIcon icon={f.icon} sticker={f.sticker} label={f.label} size={16} />
             <span>{f.label}</span>
           </button>
         ))}
@@ -214,7 +221,7 @@ export default function ModelVersioningPage() {
                         {/* Specimen Header & Status */}
                         <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-3">
                           <div className="flex items-center gap-2.5">
-                            <span className="text-2xl">{foodConfig?.icon || "🌱"}</span>
+                            <CommodityIcon icon={foodConfig?.icon || "🌱"} sticker={foodConfig?.sticker} label={foodConfig?.label} size={28} />
                             <div>
                               <h4 className="text-xs font-bold text-slate-900 dark:text-white font-mono uppercase tracking-wide">
                                 {foodConfig?.label || active.food_type?.replace("_", " ")}
@@ -234,7 +241,11 @@ export default function ModelVersioningPage() {
                         <div className="mt-3 flex items-center justify-between bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800/60 font-mono">
                           <span className="text-[10px] text-slate-500 font-medium">Active Version:</span>
                           <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 font-mono bg-emerald-100/60 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-800 flex items-center gap-1">
-                            {isBaseline && <ShieldCheck size={11} className="text-amber-500" title="Permanent Baseline" />}
+                            {isBaseline && (
+                              <span title="Permanent Baseline">
+                                <ShieldCheck size={11} className="text-amber-500" />
+                              </span>
+                            )}
                             <span>{active.version}</span>
                           </span>
                         </div>
@@ -329,18 +340,25 @@ export default function ModelVersioningPage() {
                       <tr key={v.id} className="hover:bg-slate-50 dark:hover:bg-slate-950/40">
                         <td className="py-3 font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                           <span>{v.version}</span>
-                          {((v.food_type === "tomato" && (v.version === "v1.0" || v.version === "v1.1")) || (v.food_type !== "tomato" && v.version === "v1.0")) && (
+                          {isPermanentBaseline(v.version, v.food_type) && (
                             <span title="Permanent System Baseline">
                               <ShieldCheck size={12} className="text-amber-500" />
                             </span>
                           )}
                         </td>
                         <td className="py-3 text-slate-700 dark:text-slate-300 font-semibold">
-                          <span className="mr-1">{foodConfig?.icon || "🌱"}</span>
+                          <CommodityIcon icon={foodConfig?.icon || "🌱"} sticker={foodConfig?.sticker} label={foodConfig?.label} size={16} className="mr-1" />
                           <span className="capitalize">{foodConfig?.label || v.food_type?.replace("_", " ")}</span>
                         </td>
                         <td className="py-3 text-slate-600 dark:text-slate-400">{v.trained_at ? v.trained_at.split(" ")[0] : "N/A"}</td>
-                        <td className="py-3 text-slate-600 dark:text-slate-400">{v.training_samples.toLocaleString()}</td>
+                        <td className="py-3 text-slate-600 dark:text-slate-400">
+                          <span>{v.training_samples.toLocaleString()}</span>
+                          {v.notes?.toLowerCase().includes("verified") && (
+                            <span className="block text-[8px] text-emerald-600 dark:text-emerald-400 font-medium" title="Combined reference base + verified samples">
+                              +verified
+                            </span>
+                          )}
+                        </td>
                         <td className="py-3 text-slate-800 dark:text-slate-300 font-semibold">{(v.classification_accuracy * 100).toFixed(2)}%</td>
                         <td className="py-3 text-slate-800 dark:text-slate-300 font-semibold">{v.regression_r2.toFixed(4)}</td>
                         
@@ -363,7 +381,7 @@ export default function ModelVersioningPage() {
 
                         {/* Management / Deletion Column */}
                         <td className="py-3 text-right">
-                          {((v.food_type === "tomato" && (v.version === "v1.0" || v.version === "v1.1")) || (v.food_type !== "tomato" && v.version === "v1.0")) ? (
+                          {isPermanentBaseline(v.version, v.food_type) ? (
                             <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 font-bold text-[8px] uppercase">
                               PERMANENT BASELINE
                             </span>
@@ -401,7 +419,7 @@ export default function ModelVersioningPage() {
                   Active Production Model
                 </span>
                 <span className="text-xs font-bold font-mono text-slate-900 dark:text-white capitalize">
-                  {FOOD_TYPES.find((f) => f.value === selectedCommodity)?.icon}{" "}
+                  <CommodityIcon icon={FOOD_TYPES.find((f) => f.value === selectedCommodity)?.icon || "🌱"} sticker={FOOD_TYPES.find((f) => f.value === selectedCommodity)?.sticker} label={FOOD_TYPES.find((f) => f.value === selectedCommodity)?.label} size={16} />{" "}
                   {FOOD_TYPES.find((f) => f.value === selectedCommodity)?.label || selectedCommodity}
                 </span>
               </div>
@@ -411,16 +429,18 @@ export default function ModelVersioningPage() {
             {versions
               .filter((v) => v.is_active === 1 && v.food_type === selectedCommodity)
               .map((active) => {
-                const isBaseline =
-                  (active.food_type === "tomato" && (active.version === "v1.0" || active.version === "v1.1")) ||
-                  (active.food_type !== "tomato" && active.version === "v1.0");
+                const isBaseline = isPermanentBaseline(active.version, active.food_type);
 
                 return (
                   <div key={active.id} className="space-y-4 font-mono text-xs">
                     <div className="flex flex-wrap items-center justify-between gap-2 bg-emerald-50 dark:bg-emerald-500/10 p-3 rounded-xl border border-emerald-200 dark:border-emerald-500/20 shadow-xs">
                       <span className="text-slate-600 dark:text-slate-400 font-semibold text-xs">Version:</span>
                       <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
-                        {isBaseline && <ShieldCheck size={13} className="text-amber-500" title="Permanent System Baseline" />}
+                        {isBaseline && (
+                          <span title="Permanent System Baseline">
+                            <ShieldCheck size={13} className="text-amber-500" />
+                          </span>
+                        )}
                         <span>{active.version}</span>
                       </span>
                     </div>
@@ -428,7 +448,17 @@ export default function ModelVersioningPage() {
                     <div className="space-y-2 border-t border-slate-200 dark:border-slate-900 pt-3 text-slate-600 dark:text-slate-400">
                       <div className="flex justify-between"><span>Commodity:</span><span className="text-emerald-600 dark:text-emerald-400 font-bold capitalize">{active.food_type?.replace("_", " ")}</span></div>
                       <div className="flex justify-between"><span>Trained on:</span><span className="text-slate-900 dark:text-white font-bold">{active.trained_at ? active.trained_at.split(" ")[0] : "N/A"}</span></div>
-                      <div className="flex justify-between"><span>Training samples:</span><span className="text-slate-900 dark:text-white font-bold">{active.training_samples.toLocaleString()} rows</span></div>
+                      <div className="flex justify-between items-center">
+                        <span>Training samples:</span>
+                        <div className="text-right">
+                          <span className="text-slate-900 dark:text-white font-bold">{active.training_samples.toLocaleString()} rows</span>
+                          {active.notes?.toLowerCase().includes("verified") && (
+                            <span className="block text-[8px] text-emerald-600 dark:text-emerald-400 font-medium">
+                              (Base reference + verified samples)
+                            </span>
+                          )}
+                        </div>
+                      </div>
                       <div className="flex justify-between"><span>Acc Accuracy:</span><span className="text-emerald-600 dark:text-emerald-400 font-bold">{(active.classification_accuracy * 100).toFixed(2)}%</span></div>
                       <div className="flex justify-between"><span>Reg R²:</span><span className="text-sky-600 dark:text-sky-400 font-bold">{active.regression_r2.toFixed(4)}</span></div>
                     </div>
@@ -469,7 +499,7 @@ export default function ModelVersioningPage() {
                     <tr key={v.id} className="hover:bg-slate-50 dark:hover:bg-slate-950/40">
                       <td className="py-3 font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                         <span>{v.version}</span>
-                        {((v.food_type === "tomato" && (v.version === "v1.0" || v.version === "v1.1")) || (v.food_type !== "tomato" && v.version === "v1.0")) && (
+                        {isPermanentBaseline(v.version, v.food_type) && (
                           <span title="Permanent System Baseline">
                             <ShieldCheck size={12} className="text-amber-500" />
                           </span>
@@ -479,7 +509,14 @@ export default function ModelVersioningPage() {
                         {v.food_type?.replace("_", " ")}
                       </td>
                       <td className="py-3 text-slate-600 dark:text-slate-400">{v.trained_at ? v.trained_at.split(" ")[0] : "N/A"}</td>
-                      <td className="py-3 text-slate-600 dark:text-slate-400">{v.training_samples.toLocaleString()}</td>
+                      <td className="py-3 text-slate-600 dark:text-slate-400">
+                        <span>{v.training_samples.toLocaleString()}</span>
+                        {v.notes?.toLowerCase().includes("verified") && (
+                          <span className="block text-[8px] text-emerald-600 dark:text-emerald-400 font-medium" title="Combined reference base + verified samples">
+                            +verified
+                          </span>
+                        )}
+                      </td>
                       <td className="py-3 text-slate-800 dark:text-slate-300 font-semibold">{(v.classification_accuracy * 100).toFixed(2)}%</td>
                       <td className="py-3 text-slate-800 dark:text-slate-300 font-semibold">{v.regression_r2.toFixed(4)}</td>
                       
@@ -502,7 +539,7 @@ export default function ModelVersioningPage() {
 
                       {/* Management / Deletion Column */}
                       <td className="py-3 text-right">
-                        {((v.food_type === "tomato" && (v.version === "v1.0" || v.version === "v1.1")) || (v.food_type !== "tomato" && v.version === "v1.0")) ? (
+                        {isPermanentBaseline(v.version, v.food_type) ? (
                           <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 font-bold text-[8px] uppercase">
                             PERMANENT BASELINE
                           </span>

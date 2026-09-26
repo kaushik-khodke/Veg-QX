@@ -18,6 +18,7 @@ import {
   Filter,
 } from "lucide-react";
 import { FOOD_TYPES } from "@/lib/constants";
+import { CommodityIcon } from "@/components/ui/CommodityIcon";
 
 interface VerificationStats {
   total_audited_samples: number;
@@ -98,7 +99,7 @@ export default function VerificationCenter() {
     if (found) return found;
 
     if (comm.includes("brinjal")) {
-      return { value: comm, label: "Green Brinjal", icon: "🟢", family: "Solanaceae" };
+      return { value: comm, label: "Green Brinjal", icon: "🟢", sticker: "/sticker_green_brinjal.png", family: "Solanaceae" };
     }
     if (comm.includes("gourd")) {
       return { value: comm, label: "Bitter Gourd", icon: "🥒", family: "Cucurbitaceae" };
@@ -107,7 +108,7 @@ export default function VerificationCenter() {
       return { value: comm, label: "Carrot", icon: "🥕", family: "Apiaceae" };
     }
     if (comm.includes("beetroot")) {
-      return { value: comm, label: "Beetroot", icon: "🟣", family: "Amaranthaceae" };
+      return { value: comm, label: "Beetroot", icon: "🟣", sticker: "/sticker_beetroot.png", family: "Amaranthaceae" };
     }
 
     return {
@@ -231,7 +232,7 @@ export default function VerificationCenter() {
                     : "bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-400"
                 }`}
               >
-                <span>{food.icon}</span>
+                <CommodityIcon icon={food.icon} sticker={food.sticker} label={food.label} size={16} />
                 <span>{food.label}</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
@@ -366,7 +367,7 @@ export default function VerificationCenter() {
                       {/* Specimen icon & name */}
                       <td className="p-2.5">
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-800 dark:text-slate-200">
-                          <span>{meta.icon}</span>
+                          <CommodityIcon icon={meta.icon} sticker={meta.sticker} label={meta.label} size={14} />
                           <span>{meta.label}</span>
                         </span>
                       </td>
@@ -484,7 +485,7 @@ export default function VerificationCenter() {
               >
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-base">{food.icon}</span>
+                    <CommodityIcon icon={food.icon} sticker={food.sticker} label={food.label} size={20} />
                     <span className="text-[9px] font-mono uppercase font-bold text-emerald-600 dark:text-emerald-400">
                       XGB_{food.value}_v1.x
                     </span>
