@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { PredictionRecord } from "@/lib/types";
 import { FOOD_TYPES } from "@/lib/constants";
+import { CommodityIcon } from "@/components/ui/CommodityIcon";
 import { History, CheckSquare, ChevronLeft, ChevronRight, CheckCircle2, RefreshCw } from "lucide-react";
 
 export default function HistoryPage() {
@@ -246,6 +247,7 @@ export default function HistoryPage() {
                   const rawCommodity = (row.commodity || row.food_type || "tomato").toLowerCase();
                   const foodMeta = FOOD_TYPES.find((f) => f.value === rawCommodity);
                   const icon = foodMeta?.icon || "🌱";
+                  const stickerImg = foodMeta?.sticker;
                   const specimenName = foodMeta?.label || rawCommodity.replace("_", " ").toUpperCase();
                   const displaySpecimenId = row.specimen_id || (row.tomato_id ? `ID #${row.tomato_id}` : "N/A");
 
@@ -255,7 +257,7 @@ export default function HistoryPage() {
                       <td className="p-3 text-slate-500">{formatTimestamp(row.timestamp)}</td>
                       <td className="p-3">
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 shadow-2xs">
-                          <span>{icon}</span>
+                          <CommodityIcon icon={icon} sticker={stickerImg} label={specimenName} size={14} />
                           <span className="capitalize">{specimenName}</span>
                         </span>
                       </td>

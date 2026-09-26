@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { AnalyticsSummary } from "@/lib/types";
 import { FOOD_TYPES } from "@/lib/constants";
+import { CommodityIcon } from "@/components/ui/CommodityIcon";
 import Link from "next/link";
 import {
   TrendingUp,
@@ -146,7 +147,7 @@ export default function AnalyticsPage() {
                   : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-emerald-500/50"
               }`}
             >
-              <span>{f.icon}</span>
+              <CommodityIcon icon={f.icon} sticker={f.sticker} label={f.label} size={16} />
               <span>{f.label}</span>
             </button>
           ))}

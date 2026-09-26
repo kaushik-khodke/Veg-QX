@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { FOOD_TYPES } from "@/lib/constants";
+import { CommodityIcon } from "@/components/ui/CommodityIcon";
 import { RotateCcw, AlertTriangle, Play, ChevronRight, CheckCircle2, Download, RefreshCw } from "lucide-react";
 
 export default function RetrainingPage() {
@@ -172,7 +173,7 @@ export default function RetrainingPage() {
                   : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-emerald-500/50"
               }`}
             >
-              <span>{f.icon}</span>
+              <CommodityIcon icon={f.icon} sticker={f.sticker} label={f.label} size={16} />
               <span>{f.label}</span>
             </button>
           ))}

@@ -179,7 +179,7 @@ export default function TopBar({ isSidebarOpen = true, onToggleSidebar }: TopBar
         {/* Actions (Refresh + ThemeToggle) — Pinned and Always Visible */}
         <div className="flex items-center gap-1.5 shrink-0 pl-1.5 border-l border-slate-200 dark:border-slate-850">
           <button
-            onClick={fetchStatus}
+            onClick={() => fetchStatus()}
             disabled={loading}
             suppressHydrationWarning
             className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-850 shadow-xs transition-colors flex items-center justify-center"

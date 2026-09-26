@@ -8,6 +8,7 @@ import CategoryCard from "@/components/prediction/CategoryCard";
 import ConfidenceBar from "@/components/prediction/ConfidenceBar";
 import { Upload, Terminal, BarChart2, AlertTriangle } from "lucide-react";
 import { FOOD_TYPES } from "@/lib/constants";
+import { CommodityIcon } from "@/components/ui/CommodityIcon";
 
 export default function PredictionPage() {
   const [mounted, setMounted] = useState(false);
@@ -220,7 +221,7 @@ export default function PredictionPage() {
                     : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-emerald-500/50"
                 }`}
               >
-                <span>{f.icon}</span>
+                <CommodityIcon icon={f.icon} sticker={f.sticker} label={f.label} size={16} />
                 <span>{f.label}</span>
               </button>
             );
