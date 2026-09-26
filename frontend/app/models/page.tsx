@@ -46,6 +46,7 @@ export default function ModelVersioningPage() {
         setMessage({ text: `✔ Model version ${version} for '${foodType}' is now ACTIVE in production.`, isError: false });
         if (typeof window !== "undefined") {
           window.dispatchEvent(new CustomEvent("commodityChanged", { detail: foodType }));
+          window.dispatchEvent(new CustomEvent("vegqx_model_updated", { detail: foodType }));
         }
         await loadVersions();
       } else {
@@ -87,6 +88,9 @@ export default function ModelVersioningPage() {
       const res = await api.deleteModelVersion(target, targetComm);
       if (res.success) {
         setMessage({ text: `✔ Retrained model version ${target} for '${targetComm || "tomato"}' deleted successfully.`, isError: false });
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("vegqx_model_updated", { detail: targetComm }));
+        }
         handleCancelDelete();
         await loadVersions();
       } else {

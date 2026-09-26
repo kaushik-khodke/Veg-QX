@@ -114,6 +114,10 @@ export default function RetrainingPage() {
         setResult(res);
         setStep(3); // Go to evaluation results
         loadPreview(commodity); // Refresh preview to reflect dataset reset
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("commodityChanged", { detail: commodity }));
+          window.dispatchEvent(new CustomEvent("vegqx_model_updated", { detail: commodity }));
+        }
       } else {
         setError(res.error || "Retraining failed checks.");
         setStep(1);

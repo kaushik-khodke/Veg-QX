@@ -144,5 +144,12 @@ export interface AnalyticsSummary {
     canonical_name?: string;
     model_version?: string;
     commodity?: string;
+    training_samples?: number;
+    trained_at?: string;
+    notes?: string;
+    is_improved?: boolean;
+    baseline_accuracy?: number | null;
+    delta_accuracy?: number;
+    available_versions_count?: number;
   };
 }

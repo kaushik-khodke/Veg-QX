@@ -4,12 +4,19 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { AnalyticsSummary } from "@/lib/types";
 import { FOOD_TYPES } from "@/lib/constants";
+import Link from "next/link";
 import {
   TrendingUp,
   BarChart3,
   Calendar,
   PieChart as PieIcon,
   RefreshCw,
+  Cpu,
+  Sparkles,
+  ShieldCheck,
+  ArrowUpRight,
+  Layers,
+  CheckCircle2,
 } from "lucide-react";
 import {
   AreaChart,
@@ -39,12 +46,26 @@ export default function AnalyticsPage() {
       const saved = localStorage.getItem("vegqx_commodity");
       if (saved) setCommodity(saved);
       const onCommChange = (e: any) => {
-        if (e.detail) setCommodity(e.detail);
+        if (e.detail) {
+          setCommodity(e.detail);
+          loadAnalytics(e.detail);
+        }
       };
+      const onModelUpdate = (e: any) => {
+        const target = e.detail || commodity;
+        loadAnalytics(target);
+      };
+
       window.addEventListener("commodityChanged", onCommChange);
-      return () => window.removeEventListener("commodityChanged", onCommChange);
+      window.addEventListener("vegqx_model_updated", onModelUpdate);
+      window.addEventListener("modelUpdated", onModelUpdate);
+      return () => {
+        window.removeEventListener("commodityChanged", onCommChange);
+        window.removeEventListener("vegqx_model_updated", onModelUpdate);
+        window.removeEventListener("modelUpdated", onModelUpdate);
+      };
     }
-  }, []);
+  }, [commodity]);
 
   const handleCommoditySelect = (newComm: string) => {
     setCommodity(newComm);
@@ -94,7 +115,7 @@ export default function AnalyticsPage() {
             Performance & Insights Dashboard
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Module 12: Real-time telemetry analytics, historical prediction trends, and feature gain rankings for {displayComm}.
+            Module 12: Real-time telemetry analytics, active improved model metrics, and feature gain rankings for {displayComm}.
           </p>
         </div>
         <button
@@ -134,6 +155,93 @@ export default function AnalyticsPage() {
 
       {data ? (
         <>
+          {/* Active Specimen Improved Model Showcase Banner */}
+          <div className="glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-md relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-96 h-full bg-gradient-to-l from-emerald-500/10 via-sky-500/5 to-transparent pointer-events-none" />
+
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              {/* Left Info */}
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 shadow-xs">
+                    <Cpu size={13} className="text-emerald-500" />
+                    <span>{data.model_performance.canonical_name || data.model_performance.model_version || `${displayComm}_v1.0`}</span>
+                  </span>
+
+                  {data.model_performance.is_improved ? (
+                    <span className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 flex items-center gap-1 shadow-xs animate-pulse">
+                      <Sparkles size={12} className="text-emerald-600 dark:text-emerald-400" />
+                      <span>IMPROVED MODEL DEPLOYED</span>
+                      {data.model_performance.delta_accuracy !== undefined && data.model_performance.delta_accuracy > 0 && (
+                        <span className="ml-1 bg-emerald-600 text-white px-1.5 py-0.5 rounded text-[9px]">
+                          +{data.model_performance.delta_accuracy.toFixed(2)}% GAIN
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-sky-100 dark:bg-sky-950/80 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-700 flex items-center gap-1">
+                      <ShieldCheck size={12} className="text-sky-600 dark:text-sky-400" />
+                      <span>PRODUCTION BASELINE</span>
+                    </span>
+                  )}
+
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800">
+                    Engine: {data.model_performance.classifier_algorithm || "XGBoost"} + {data.model_performance.regressor_algorithm || "Regressor"}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono text-slate-600 dark:text-slate-400">
+                  <div>
+                    <span className="text-slate-400">Target Specimen:</span>{" "}
+                    <span className="text-slate-900 dark:text-white font-bold uppercase">{displayComm}</span>
+                  </div>
+                  {data.model_performance.training_samples ? (
+                    <div>
+                      <span className="text-slate-400">Dataset Samples:</span>{" "}
+                      <span className="text-slate-900 dark:text-white font-semibold">{data.model_performance.training_samples.toLocaleString()}</span>
+                    </div>
+                  ) : null}
+                  {data.model_performance.trained_at ? (
+                    <div>
+                      <span className="text-slate-400">Last Deployed:</span>{" "}
+                      <span className="text-slate-900 dark:text-white font-semibold">{data.model_performance.trained_at}</span>
+                    </div>
+                  ) : null}
+                  {data.model_performance.baseline_accuracy ? (
+                    <div>
+                      <span className="text-slate-400">Baseline Acc:</span>{" "}
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold">{(data.model_performance.baseline_accuracy * 100).toFixed(2)}%</span>
+                    </div>
+                  ) : null}
+                </div>
+
+                {data.model_performance.notes ? (
+                  <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 italic line-clamp-1">
+                    Provenance: "{data.model_performance.notes}"
+                  </p>
+                ) : null}
+              </div>
+
+              {/* Quick Actions */}
+              <div className="flex items-center gap-2 self-start lg:self-center shrink-0">
+                <Link
+                  href="/retrain"
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-all shadow-sm shadow-emerald-600/20"
+                >
+                  <span>Retrain {displayComm}</span>
+                  <ArrowUpRight size={13} />
+                </Link>
+                <Link
+                  href="/models"
+                  className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-emerald-500/50 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-mono flex items-center gap-1.5 transition-all"
+                >
+                  <Layers size={13} />
+                  <span>Versions ({data.model_performance.available_versions_count || 1})</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+
           {/* Diagnostic Metrics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {/* Total Analyzed */}
@@ -156,10 +264,24 @@ export default function AnalyticsPage() {
 
             {/* Classification Accuracy */}
             <div className="glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800/40 font-mono shadow-sm">
-              <span className="text-[9px] uppercase tracking-widest text-slate-500 block mb-1 font-semibold">CLASSIFIER ACCURACY</span>
-              <span className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
-                {(data.model_performance.classification_accuracy * 100).toFixed(2)}%
-              </span>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[9px] uppercase tracking-widest text-slate-500 font-semibold">CLASSIFIER ACCURACY</span>
+                {data.model_performance.is_improved && (
+                  <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-950/70 px-1.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-800">
+                    IMPROVED
+                  </span>
+                )}
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
+                  {(data.model_performance.classification_accuracy * 100).toFixed(2)}%
+                </span>
+                {data.model_performance.delta_accuracy !== undefined && data.model_performance.delta_accuracy > 0 && (
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                    ↑ +{data.model_performance.delta_accuracy.toFixed(2)}%
+                  </span>
+                )}
+              </div>
               <span className="text-[9px] text-slate-500 dark:text-slate-400 block mt-1 truncate">
                 {data.model_performance.canonical_name || `${data.model_performance.classifier_algorithm || "ML"} Validation`}
               </span>
