@@ -13,11 +13,11 @@ router = APIRouter(prefix="/health", tags=["Health"])
 
 
 @router.get("")
+@router.get("/")
 def health_check(
     commodity: str = "tomato",
     sensor_svc: SensorService = Depends(get_sensor_service),
 ):
-    inference_svc = get_inference_service(commodity)
     # Database check
     db_ok = False
     try:
@@ -25,38 +25,38 @@ def health_check(
         conn.execute("SELECT 1")
         conn.close()
         db_ok = True
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[Health] DB check error: {e}")
 
     # Model status
-    model_ok = inference_svc.is_loaded()
-
-    # Active model descriptive name
+    model_ok = False
     active_model_name = None
-    if model_ok:
-        meta = getattr(inference_svc, "metadata", {}) or {}
-        reg_algo = str(meta.get("regressor_algorithm", "XGBoost"))
-        if "LightGBM" in reg_algo:
-            algo_code = "LGBM"
-        elif "HistGradient" in reg_algo:
-            algo_code = "HGB"
-        elif "XGB" in reg_algo:
-            algo_code = "XGB"
-        else:
-            algo_code = "XGB"
-
-        raw_ver = inference_svc.model_version or "v1.0"
-        if raw_ver.startswith(f"{commodity}_"):
-            active_model_name = f"{algo_code}_{raw_ver}"
-        elif raw_ver.startswith("v"):
-            active_model_name = f"{algo_code}_{commodity}_{raw_ver}"
-        else:
-            active_model_name = f"{algo_code}_{raw_ver}"
+    model_ver = None
+    try:
+        inference_svc = get_inference_service(commodity)
+        model_ok = inference_svc.is_loaded()
+        if model_ok:
+            active_model_name = inference_svc.get_canonical_model_name()
+            model_ver = inference_svc.model_version
+    except Exception as e:
+        print(f"[Health] Inference service check error: {e}")
 
     # USB status
-    sensor_status = sensor_svc.get_status()
-    available_ports = sensor_status.get("available_ports", [])
-    detected_port = sensor_svc.find_esp32_port()
+    usb_connected = False
+    usb_port = None
+    available_ports = []
+    esp32_detected = False
+    sensor_ready = False
+    try:
+        sensor_status = sensor_svc.get_status()
+        available_ports = sensor_status.get("available_ports", [])
+        detected_port = sensor_svc.find_esp32_port()
+        usb_connected = bool(sensor_status.get("is_connected", False))
+        usb_port = sensor_status.get("port") or detected_port
+        esp32_detected = bool(sensor_status.get("esp32_detected", False) or len(available_ports) > 0)
+        sensor_ready = usb_connected
+    except Exception as e:
+        print(f"[Health] Sensor status check error: {e}")
 
     # Overall health status
     overall = "healthy" if (db_ok and model_ok) else "degraded"
@@ -65,13 +65,13 @@ def health_check(
         "status": overall,
         "database_connected": db_ok,
         "model_loaded": model_ok,
-        "model_version": inference_svc.model_version if model_ok else None,
+        "model_version": model_ver,
         "active_model": active_model_name,
         "commodity": commodity,
-        "usb_connected": sensor_status["is_connected"],
-        "usb_port": sensor_status["port"] or detected_port,
+        "usb_connected": usb_connected,
+        "usb_port": usb_port,
         "available_ports": available_ports,
-        "esp32_detected": sensor_status["esp32_detected"] or len(available_ports) > 0,
-        "sensor_ready": sensor_status["is_connected"],
+        "esp32_detected": esp32_detected,
+        "sensor_ready": sensor_ready,
     }
 
