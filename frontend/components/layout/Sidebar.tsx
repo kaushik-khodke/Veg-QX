@@ -64,38 +64,56 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
   useEffect(() => {
     let isMounted = true;
+
+    const applyHealth = (health: any) => {
+      if (!isMounted || !health) return;
+      if (health.active_model) {
+        setActiveModel(health.active_model);
+      } else if (health.model_version) {
+        const mv = health.model_version;
+        if (mv.startsWith("XGB_") || mv.startsWith("LGBM_") || mv.startsWith("HGB_")) {
+          setActiveModel(mv);
+        } else if (mv.includes(activeFood)) {
+          setActiveModel(`XGB_${mv}`);
+        } else {
+          setActiveModel(`XGB_${activeFood}_${mv}`);
+        }
+      } else {
+        setActiveModel(`XGB_${activeFood}_v1.0`);
+      }
+      if (health.usb_port) {
+        setUsbPort(health.usb_port);
+      }
+    };
+
     const fetchActiveVersion = async () => {
       try {
         const health = await api.getHealth(activeFood);
-        if (!isMounted) return;
-        if (health.active_model) {
-          setActiveModel(health.active_model);
-        } else if (health.model_version) {
-          const mv = health.model_version;
-          if (mv.startsWith("XGB_") || mv.startsWith("LGBM_") || mv.startsWith("HGB_")) {
-            setActiveModel(mv);
-          } else if (mv.includes(activeFood)) {
-            setActiveModel(`XGB_${mv}`);
-          } else {
-            setActiveModel(`XGB_${activeFood}_${mv}`);
-          }
-        } else {
-          setActiveModel(`XGB_${activeFood}_v1.0`);
-        }
-        if (health.usb_port) {
-          setUsbPort(health.usb_port);
-        }
+        applyHealth(health);
       } catch (e) {
         if (isMounted) {
           setActiveModel(`XGB_${activeFood}_v1.0`);
         }
       }
     };
+
     fetchActiveVersion();
-    const interval = setInterval(fetchActiveVersion, 3000);
+
+    const onHealthUpdate = (e: any) => {
+      if (e.detail) applyHealth(e.detail);
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("vegqx_health_update", onHealthUpdate);
+    }
+
+    const interval = setInterval(fetchActiveVersion, 25000);
     return () => {
       isMounted = false;
       clearInterval(interval);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("vegqx_health_update", onHealthUpdate);
+      }
     };
   }, [activeFood]);
 

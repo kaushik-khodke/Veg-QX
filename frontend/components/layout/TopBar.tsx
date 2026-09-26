@@ -11,6 +11,26 @@ interface TopBarProps {
   onToggleSidebar?: () => void;
 }
 
+function MissionClock() {
+  const [time, setTime] = useState("");
+  useEffect(() => {
+    const updateTime = () => {
+      const d = new Date();
+      setTime(d.toISOString().replace("T", " ").substring(0, 19) + " UTC");
+    };
+    updateTime();
+    const tInterval = setInterval(updateTime, 1000);
+    return () => clearInterval(tInterval);
+  }, []);
+
+  return (
+    <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-850 px-2.5 py-1.5 rounded-lg text-[10px] text-slate-500 dark:text-slate-400 shadow-xs select-none">
+      <Clock size={13} className="text-sky-600 dark:text-sky-400" />
+      <span className="text-slate-700 dark:text-slate-300 font-semibold">{time || "CALIBRATING TIME..."}</span>
+    </div>
+  );
+}
+
 export default function TopBar({ isSidebarOpen = true, onToggleSidebar }: TopBarProps) {
   const [status, setStatus] = useState<USBStatus>({
     status: "degraded",
@@ -22,7 +42,6 @@ export default function TopBar({ isSidebarOpen = true, onToggleSidebar }: TopBar
     sensor_ready: false,
   });
   const [loading, setLoading] = useState(false);
-  const [missionTime, setMissionTime] = useState("");
   const [commodity, setCommodity] = useState("tomato");
 
   useEffect(() => {
@@ -37,22 +56,14 @@ export default function TopBar({ isSidebarOpen = true, onToggleSidebar }: TopBar
     }
   }, []);
 
-  // live ticking mission clock
-  useEffect(() => {
-    const updateTime = () => {
-      const d = new Date();
-      setMissionTime(d.toISOString().replace("T", " ").substring(0, 19) + " UTC");
-    };
-    updateTime();
-    const tInterval = setInterval(updateTime, 1000);
-    return () => clearInterval(tInterval);
-  }, []);
-
-  const fetchStatus = async () => {
-    setLoading(true);
+  const fetchStatus = async (isFirst = false) => {
+    if (isFirst) setLoading(true);
     try {
       const health = await api.getHealth(commodity);
       setStatus(health);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("vegqx_health_update", { detail: health }));
+      }
     } catch (e) {
       setStatus({
         status: "degraded",
@@ -64,13 +75,13 @@ export default function TopBar({ isSidebarOpen = true, onToggleSidebar }: TopBar
         sensor_ready: false,
       });
     } finally {
-      setLoading(false);
+      if (isFirst) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 5000);
+    fetchStatus(true);
+    const interval = setInterval(() => fetchStatus(false), 8000);
     return () => clearInterval(interval);
   }, [commodity]);
 
@@ -88,10 +99,7 @@ export default function TopBar({ isSidebarOpen = true, onToggleSidebar }: TopBar
             <Menu size={16} />
           </button>
         )}
-        <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-850 px-2.5 py-1.5 rounded-lg text-[10px] text-slate-500 dark:text-slate-400 shadow-xs">
-          <Clock size={13} className="text-sky-600 dark:text-sky-400" />
-          <span className="text-slate-700 dark:text-slate-300 font-semibold">{missionTime || "CALIBRATING TIME..."}</span>
-        </div>
+        <MissionClock />
 
         <div className="hidden sm:flex items-center gap-1.5 bg-slate-50 dark:bg-[#0B1020] border border-slate-200 dark:border-slate-850 px-2.5 py-1.5 rounded-lg text-[10px] tracking-wider text-slate-600 dark:text-slate-400 shadow-xs">
           <span className="text-slate-400 dark:text-slate-500 font-semibold">TARGET:</span>
@@ -135,7 +143,10 @@ export default function TopBar({ isSidebarOpen = true, onToggleSidebar }: TopBar
             }`}
           />
           <span className="text-slate-400 dark:text-slate-500 font-medium">MODEL:</span>
-          <span className={status.model_loaded ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-red-500 font-bold"}>
+          <span 
+            className={`font-bold max-w-[190px] truncate ${status.model_loaded ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}
+            title={status.active_model || status.model_version || "ONLINE"}
+          >
             {status.model_loaded ? (status.active_model || status.model_version || "ONLINE") : "UNLOADED"}
           </span>
         </div>
