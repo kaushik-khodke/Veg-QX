@@ -15,17 +15,50 @@ import {
 
 const client = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 10000,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
+// Fast in-flight request deduplication and short-lived cache (prevents duplicate simultaneous network hits)
+const inFlightRequests = new Map<string, Promise<any>>();
+const getCache = new Map<string, { data: any; expiry: number }>();
+
+export const clearApiCache = () => {
+  getCache.clear();
+};
+
+const cachedGet = async <T = any>(endpoint: string, ttlMs = 2000): Promise<T> => {
+  const now = Date.now();
+  const cached = getCache.get(endpoint);
+  if (cached && cached.expiry > now) {
+    return cached.data as T;
+  }
+
+  if (inFlightRequests.has(endpoint)) {
+    return inFlightRequests.get(endpoint) as Promise<T>;
+  }
+
+  const promise = client
+    .get(endpoint)
+    .then((res) => {
+      getCache.set(endpoint, { data: res.data, expiry: Date.now() + ttlMs });
+      return res.data;
+    })
+    .finally(() => {
+      inFlightRequests.delete(endpoint);
+    });
+
+  inFlightRequests.set(endpoint, promise);
+  return promise;
+};
+
 export const api = {
   // Health
   getHealth: async (commodity?: string): Promise<USBStatus> => {
     const endpoint = commodity ? `/health?commodity=${encodeURIComponent(commodity)}` : "/health";
-    const res = await client.get(endpoint);
-    return res.data;
+    return cachedGet<USBStatus>(endpoint, 2500);
   },
 
   // Tomato ID Generator
@@ -52,8 +85,7 @@ export const api = {
 
   // Commodities
   getCommodities: async (): Promise<{ success: boolean; data: any[] }> => {
-    const res = await client.get("/commodities");
-    return res.data;
+    return cachedGet("/commodities", 5000);
   },
 
   // Predictions
@@ -71,6 +103,7 @@ export const api = {
     position?: number;
     input_source?: string;
   }): Promise<PredictionRecord> => {
+    clearApiCache();
     const res = await client.post("/predict", reading);
     return res.data;
   },
@@ -95,12 +128,13 @@ export const api = {
     max_freshness_score: number;
     overall_category: "Fresh" | "Aging" | "Spoiling";
   }> => {
+    clearApiCache();
     const res = await client.post("/predict_batch", { readings });
     return res.data;
   },
 
   // CSV Upload
-  uploadCSV: async (file: File): Promise<{
+  uploadCSV: async (file: File, commodity?: string): Promise<{
     success: boolean;
     summary: {
       auto_verified_records: number;
@@ -115,9 +149,11 @@ export const api = {
     };
     preview: any[];
   }> => {
+    clearApiCache();
     const formData = new FormData();
     formData.append("file", file);
-    const res = await client.post("/upload_csv", formData, {
+    const endpoint = commodity ? `/upload_csv?commodity=${encodeURIComponent(commodity)}` : "/upload_csv";
+    const res = await client.post(endpoint, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -137,8 +173,7 @@ export const api = {
     params.append("offset", offset.toString());
     if (category) params.append("category", category);
     if (commodity) params.append("commodity", commodity);
-    const res = await client.get(`/prediction_history?${params.toString()}`);
-    return res.data;
+    return cachedGet(`/prediction_history?${params.toString()}`, 2500);
   },
 
   verifyPrediction: async (
@@ -147,6 +182,7 @@ export const api = {
     actualScore?: number,
     notes?: string
   ): Promise<{ success: boolean; message: string }> => {
+    clearApiCache();
     const res = await client.post(`/verify_prediction/${id}`, {
       actual_category: actualCategory,
       actual_freshness_score: actualScore,
@@ -163,58 +199,68 @@ export const api = {
       notes?: string;
     }>
   ): Promise<{ success: boolean; success_count: number; message: string; errors?: string[] }> => {
+    clearApiCache();
     const res = await client.post("/verify_prediction/bulk", { items });
     return res.data;
   },
 
-  getVerificationStats: async (): Promise<{
+  getVerificationStats: async (commodity?: string): Promise<{
     success: boolean;
     data: {
       total_audited_samples: number;
       fresh_count: number;
       aging_count: number;
       spoiling_count: number;
+      commodity_distribution?: Record<string, number>;
       retraining_readiness: boolean;
       remaining_samples_required: number;
     };
   }> => {
-    const res = await client.get("/verify_prediction/stats");
-    return res.data;
+    const params = new URLSearchParams();
+    if (commodity && commodity !== "all") params.append("commodity", commodity);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return cachedGet(`/verify_prediction/stats${qs}`, 2500);
   },
 
-  getVerificationHistory: async (): Promise<{
+  getVerificationHistory: async (commodity?: string, category?: string): Promise<{
     success: boolean;
     total: number;
     data: any[];
   }> => {
-    const res = await client.get("/verify_prediction/history");
-    return res.data;
+    const params = new URLSearchParams();
+    if (commodity && commodity !== "all") params.append("commodity", commodity);
+    if (category && category !== "all") params.append("category", category);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return cachedGet(`/verify_prediction/history${qs}`, 2500);
   },
 
-  getDownloadVerifiedCsvUrl: (): string => {
+  getDownloadVerifiedCsvUrl: (commodity?: string): string => {
+    if (commodity && commodity !== "all") {
+      return `${API_BASE_URL}/verify_prediction/download_csv?commodity=${encodeURIComponent(commodity)}`;
+    }
     return `${API_BASE_URL}/verify_prediction/download_csv`;
   },
 
   // Model Retraining & Info
   getmodelInfo: async (commodity?: string): Promise<{ success: boolean; data: ModelInfo }> => {
     const endpoint = commodity ? `/model_information?commodity=${commodity}` : "/model_information";
-    const res = await client.get(endpoint);
-    return res.data;
+    return cachedGet(endpoint, 2500);
   },
 
   getModelVersions: async (commodity?: string): Promise<{ success: boolean; data: ModelVersion[] }> => {
     const endpoint = commodity ? `/model_versions?commodity=${commodity}` : "/model_versions";
-    const res = await client.get(endpoint);
-    return res.data;
+    return cachedGet(endpoint, 2000);
   },
 
   activateModelVersion: async (version: string, commodity?: string): Promise<{ success: boolean; message: string }> => {
+    clearApiCache();
     const endpoint = commodity ? `/model_versions/activate/${version}?commodity=${commodity}` : `/model_versions/activate/${version}`;
     const res = await client.post(endpoint);
     return res.data;
   },
 
   deleteModelVersion: async (version: string, commodity?: string): Promise<{ success: boolean; message: string }> => {
+    clearApiCache();
     const endpoint = commodity ? `/model_versions/delete/${version}?commodity=${commodity}` : `/model_versions/${version}`;
     const res = await client.delete(endpoint);
     return res.data;
@@ -234,8 +280,7 @@ export const api = {
     };
   }> => {
     const endpoint = commodity ? `/retrain_model/preview?commodity=${commodity}` : "/retrain_model/preview";
-    const res = await client.get(endpoint);
-    return res.data;
+    return cachedGet(endpoint, 2000);
   },
 
   getRetrainingProgress: async (): Promise<{
@@ -252,6 +297,7 @@ export const api = {
   },
 
   retrainModel: async (notes = "", commodity?: string): Promise<RetrainingLog> => {
+    clearApiCache();
     const res = await client.post("/retrain_model", { notes, commodity });
     return res.data;
   },
@@ -259,8 +305,7 @@ export const api = {
   // Analytics
   getAnalytics: async (commodity?: string): Promise<AnalyticsSummary> => {
     const endpoint = commodity ? `/analytics_dashboard?commodity=${commodity}` : "/analytics_dashboard";
-    const res = await client.get(endpoint);
-    return res.data;
+    return cachedGet(endpoint, 2000);
   },
 };
 

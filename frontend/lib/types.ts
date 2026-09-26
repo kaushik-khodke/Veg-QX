@@ -120,6 +120,7 @@ export interface RetrainingLog {
 
 export interface AnalyticsSummary {
   success: boolean;
+  commodity?: string;
   summary: {
     total_predictions: number;
     average_freshness_score: number;
@@ -137,5 +138,11 @@ export interface AnalyticsSummary {
   model_performance: {
     classification_accuracy: number;
     regression_r2: number;
+    algorithm?: string;
+    classifier_algorithm?: string;
+    regressor_algorithm?: string;
+    canonical_name?: string;
+    model_version?: string;
+    commodity?: string;
   };
 }
