@@ -116,6 +116,7 @@ app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -136,9 +137,8 @@ app.include_router(retraining.router)
 
 @app.get("/")
 def read_root():
-    ensure_logo_copied()
     return {
-        "title": "Tomato Freshness Detection API",
+        "title": "VEG QX Freshness Detection API",
         "version": "1.1",
         "documentation": "/docs",
         "status": "online",
