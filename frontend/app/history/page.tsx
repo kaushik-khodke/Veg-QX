@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { PredictionRecord } from "@/lib/types";
+import { FOOD_TYPES } from "@/lib/constants";
 import { History, CheckSquare, ChevronLeft, ChevronRight, CheckCircle2, RefreshCw } from "lucide-react";
 
 export default function HistoryPage() {
@@ -11,6 +12,7 @@ export default function HistoryPage() {
   const [limit] = useState(25);
   const [offset, setOffset] = useState(0);
   const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [specimenFilter, setSpecimenFilter] = useState<string>("all");
   const [loading, setLoading] = useState(false);
 
   // Verification state modal
@@ -39,13 +41,20 @@ export default function HistoryPage() {
   const loadHistory = async () => {
     setLoading(true);
     try {
-      const res = await api.getHistory(limit, offset, categoryFilter || undefined);
+      const res = await api.getHistory(
+        limit,
+        offset,
+        categoryFilter || undefined,
+        specimenFilter !== "all" ? specimenFilter : undefined
+      );
       if (res.success) {
         setHistory(res.data);
         setTotal(res.total);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.warn("[History] Error loading records:", e?.message || e);
+      setHistory([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -53,7 +62,7 @@ export default function HistoryPage() {
 
   useEffect(() => {
     loadHistory();
-  }, [offset, categoryFilter]);
+  }, [offset, categoryFilter, specimenFilter]);
 
   const handleOpenVerify = (record: PredictionRecord) => {
     setSelectedRecord(record);
@@ -157,6 +166,27 @@ export default function HistoryPage() {
 
       {/* Query Filters */}
       <div className="glass-panel rounded-xl p-4 border border-slate-200 dark:border-slate-800/40 flex flex-wrap gap-4 items-center shadow-sm">
+        {/* Specimen Filter */}
+        <div className="flex items-center gap-2 font-mono text-xs">
+          <span className="text-slate-600 dark:text-slate-400 font-semibold">Filter Specimen:</span>
+          <select
+            value={specimenFilter}
+            onChange={(e) => {
+              setSpecimenFilter(e.target.value);
+              setOffset(0);
+            }}
+            className="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 outline-none focus:border-emerald-500 shadow-xs font-mono"
+          >
+            <option value="all">🌐 All Specimens</option>
+            {FOOD_TYPES.filter((f) => !f.disabled).map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.icon} {f.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Category Filter */}
         <div className="flex items-center gap-2 font-mono text-xs">
           <span className="text-slate-600 dark:text-slate-400 font-semibold">Filter Category:</span>
           <select
@@ -187,7 +217,7 @@ export default function HistoryPage() {
         )}
 
         <div className="ml-auto text-[12px] font-mono text-slate-500 font-medium">
-          Showing {offset + 1} - {Math.min(offset + limit, total)} of {total} records
+          Showing {total === 0 ? 0 : offset + 1} - {Math.min(offset + limit, total)} of {total} records
         </div>
       </div>
 
@@ -199,7 +229,8 @@ export default function HistoryPage() {
               <tr className="bg-slate-50 dark:bg-slate-950/40 text-slate-500 border-b border-slate-200 dark:border-slate-800 uppercase tracking-wider text-[10px]">
                 <th className="p-3">ID</th>
                 <th className="p-3">TIMESTAMP</th>
-                <th className="p-3">TOMATO_ID</th>
+                <th className="p-3">SPECIMEN</th>
+                <th className="p-3">SPECIMEN_ID</th>
                 <th className="p-3">POS</th>
                 <th className="p-3">RVI</th>
                 <th className="p-3">NDVI</th>
@@ -211,40 +242,58 @@ export default function HistoryPage() {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-900/60">
               {history.length > 0 ? (
-                history.map((row) => (
-                  <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-950/20">
-                    <td className="p-3 font-semibold text-slate-500 dark:text-slate-400">db_{row.id}</td>
-                    <td className="p-3 text-slate-500">{formatTimestamp(row.timestamp)}</td>
-                    <td className="p-3 font-bold text-slate-800 dark:text-slate-400">{row.tomato_id || "N/A"}</td>
-                    <td className="p-3">{row.position || "N/A"}</td>
-                    <td className="p-3">{row.rvi.toFixed(2)}</td>
-                    <td className="p-3">{row.ndvi.toFixed(4)}</td>
-                    <td className="p-3 text-slate-900 dark:text-white font-bold">{row.freshness_score.toFixed(1)}</td>
-                    <td className="p-3 text-slate-500">{row.model_version}</td>
-                    <td className="p-3">
-                      <span className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold uppercase ${
-                        row.category === "Fresh" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20" :
-                        row.category === "Aging" ? "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20" :
-                        "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/20"
-                      }`}>
-                        {row.category}
-                      </span>
-                    </td>
-                    <td className="p-3 text-right">
-                      <button
-                        onClick={() => handleOpenVerify(row)}
-                        className="flex items-center gap-1 ml-auto px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 hover:border-emerald-500 text-slate-700 hover:text-emerald-700 dark:text-slate-300 dark:hover:text-emerald-400 rounded-md text-[11px] font-mono font-bold transition-all shadow-xs"
-                      >
-                        <CheckSquare size={10} />
-                        <span>VERIFY</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                history.map((row) => {
+                  const rawCommodity = (row.commodity || row.food_type || "tomato").toLowerCase();
+                  const foodMeta = FOOD_TYPES.find((f) => f.value === rawCommodity);
+                  const icon = foodMeta?.icon || "🌱";
+                  const specimenName = foodMeta?.label || rawCommodity.replace("_", " ").toUpperCase();
+                  const displaySpecimenId = row.specimen_id || (row.tomato_id ? `ID #${row.tomato_id}` : "N/A");
+
+                  return (
+                    <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-950/20">
+                      <td className="p-3 font-semibold text-slate-500 dark:text-slate-400">db_{row.id}</td>
+                      <td className="p-3 text-slate-500">{formatTimestamp(row.timestamp)}</td>
+                      <td className="p-3">
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 shadow-2xs">
+                          <span>{icon}</span>
+                          <span className="capitalize">{specimenName}</span>
+                        </span>
+                      </td>
+                      <td className="p-3 font-bold text-slate-800 dark:text-slate-300">{displaySpecimenId}</td>
+                      <td className="p-3">{row.position || "N/A"}</td>
+                      <td className="p-3">{row.rvi.toFixed(2)}</td>
+                      <td className="p-3">{row.ndvi.toFixed(4)}</td>
+                      <td className="p-3 text-slate-900 dark:text-white font-bold">{row.freshness_score.toFixed(1)}</td>
+                      <td className="p-3">
+                        <span className="inline-block px-2 py-0.5 rounded text-[10.5px] font-mono font-bold bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-emerald-700 dark:text-emerald-400">
+                          {row.model_version || `XGB_${rawCommodity}_v1.0`}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <span className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold uppercase ${
+                          row.category === "Fresh" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20" :
+                          row.category === "Aging" ? "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20" :
+                          "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/20"
+                        }`}>
+                          {row.category}
+                        </span>
+                      </td>
+                      <td className="p-3 text-right">
+                        <button
+                          onClick={() => handleOpenVerify(row)}
+                          className="flex items-center gap-1 ml-auto px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 hover:border-emerald-500 text-slate-700 hover:text-emerald-700 dark:text-slate-300 dark:hover:text-emerald-400 rounded-md text-[11px] font-mono font-bold transition-all shadow-xs"
+                        >
+                          <CheckSquare size={10} />
+                          <span>VERIFY</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan={10} className="p-8 text-center text-slate-500">
-                    No prediction records found.
+                  <td colSpan={11} className="p-8 text-center text-slate-500">
+                    No prediction records found for the selected specimen and category filter.
                   </td>
                 </tr>
               )}
@@ -262,7 +311,7 @@ export default function HistoryPage() {
             <ChevronLeft size={12} />
             <span>PREV</span>
           </button>
-          <span className="font-bold">PAGE {offset / limit + 1}</span>
+          <span className="font-bold">PAGE {total === 0 ? 0 : Math.floor(offset / limit) + 1}</span>
           <button
             onClick={handleNextPage}
             disabled={offset + limit >= total}
@@ -293,9 +342,28 @@ export default function HistoryPage() {
 
             <form onSubmit={handleVerifySubmit} className="space-y-4 text-xs font-mono">
               <div className="bg-slate-50 dark:bg-slate-950/80 p-3 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1.5 text-[10px] text-slate-600 dark:text-slate-400">
-                <div>PREDICTED SCORE: <span className="text-slate-900 dark:text-white font-bold">{selectedRecord.freshness_score.toFixed(2)}</span></div>
-                <div>PREDICTED CLASS: <span className="text-slate-900 dark:text-white font-bold">{selectedRecord.category}</span></div>
-                <div>INPUT TELEMETRY: <span className="text-slate-700 dark:text-slate-300">Blue:{selectedRecord.blue} / NIR:{selectedRecord.nir}</span></div>
+                <div className="flex justify-between">
+                  <span>SPECIMEN:</span>
+                  <span className="text-slate-900 dark:text-white font-bold capitalize">
+                    {selectedRecord.commodity || selectedRecord.food_type || "tomato"} ({selectedRecord.specimen_id || (selectedRecord.tomato_id ? `#${selectedRecord.tomato_id}` : "N/A")})
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>MODEL VERSION:</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">{selectedRecord.model_version}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>PREDICTED SCORE:</span>
+                  <span className="text-slate-900 dark:text-white font-bold">{selectedRecord.freshness_score.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>PREDICTED CLASS:</span>
+                  <span className="text-slate-900 dark:text-white font-bold">{selectedRecord.category}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>INPUT TELEMETRY:</span>
+                  <span className="text-slate-700 dark:text-slate-300">Blue:{selectedRecord.blue} / NIR:{selectedRecord.nir}</span>
+                </div>
               </div>
 
               {/* Verified Category selection */}
