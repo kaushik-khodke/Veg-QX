@@ -6,20 +6,35 @@ import SpectralWaves from "@/components/landing/SpectralWaves";
 import Link from "next/link";
 import { ArrowRight, Terminal as TerminalIcon, ShieldCheck } from "lucide-react";
 
-export default function LandingPage() {
+function ScanProgressBar() {
   const [scanProgress, setScanProgress] = useState(0);
-  const [logs, setLogs] = useState<string[]>([]);
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Sync scanProgress with the 6s scanner loop
   useEffect(() => {
     const interval = setInterval(() => {
       setScanProgress((prev) => (prev + 4) % 104);
-    }, 240); // 240ms * 25 steps = 6000ms loop
+    }, 240);
     return () => clearInterval(interval);
   }, []);
 
-  // Scientific logs typing streaming effect
+  const numBlocks = Math.floor(scanProgress / 10);
+  const loadingBar = "█".repeat(numBlocks) + "░".repeat(10 - numBlocks);
+
+  return (
+    <div className="border-t border-slate-200 dark:border-slate-800/80 pt-2 flex justify-between items-center">
+      <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">
+        SCAN PROGRESS
+      </span>
+      <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+        {loadingBar} {Math.min(scanProgress, 100)}%
+      </span>
+    </div>
+  );
+}
+
+function MissionTerminalLogs() {
+  const [logs, setLogs] = useState<string[]>([]);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     const allLogs = [
       "Initializing core AS7341 spectral sensor array...",
@@ -44,22 +59,40 @@ export default function LandingPage() {
       const statusText = isNotResult ? " ... OK" : "";
       
       setLogs((prev) => [...prev.slice(-15), `[${timestamp}] ${text}${statusText}`]);
-      
       currentLogIndex = (currentLogIndex + 1) % allLogs.length;
-    }, 1100);
+    }, 1200);
 
     return () => clearInterval(logInterval);
   }, []);
 
-  // auto scroll to bottom of logs
   useEffect(() => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
     }
   }, [logs]);
 
-  const numBlocks = Math.floor(scanProgress / 10);
-  const loadingBar = "█".repeat(numBlocks) + "░".repeat(10 - numBlocks);
+  return (
+    <div 
+      ref={scrollContainerRef}
+      className="flex-1 overflow-y-auto font-mono text-[9.5px] bg-slate-50/90 dark:bg-[#050810]/70 border border-slate-200/90 dark:border-slate-800/80 rounded-xl p-2.5 space-y-1.5 scrollbar-thin shadow-inner"
+    >
+      {logs.length === 0 ? (
+        <div className="text-slate-400 dark:text-slate-600 animate-pulse">[ AWAITING SENSOR TELEMETRY STREAM... ]</div>
+      ) : (
+        logs.map((log, index) => (
+          <div key={index} className="leading-relaxed">
+            <span className="text-slate-400 dark:text-slate-500 font-semibold">{log.substring(0, 10)}</span>
+            <span className={log.includes("Classification") || log.includes("Score") || log.includes("FRESH") ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-slate-800 dark:text-slate-200"}>
+              {log.substring(10)}
+            </span>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+export default function LandingPage() {
 
   return (
     <div className="space-y-4 text-slate-700 dark:text-slate-350 font-mono select-none">
@@ -116,14 +149,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="border-t border-slate-200 dark:border-slate-800/80 pt-2 flex justify-between items-center">
-              <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">
-                SCAN PROGRESS
-              </span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                {loadingBar} {Math.min(scanProgress, 100)}%
-              </span>
-            </div>
+            <ScanProgressBar />
           </div>
 
           {/* Mission Console Terminal Card */}
@@ -135,24 +161,8 @@ export default function LandingPage() {
               <TerminalIcon size={14} className="text-sky-600 dark:text-sky-400 animate-pulse" />
             </div>
 
-            {/* Logs Inset Window */}
-            <div 
-              ref={scrollContainerRef}
-              className="flex-1 overflow-y-auto font-mono text-[9.5px] bg-slate-50/90 dark:bg-[#050810]/70 border border-slate-200/90 dark:border-slate-800/80 rounded-xl p-2.5 space-y-1.5 scrollbar-thin shadow-inner"
-            >
-              {logs.length === 0 ? (
-                <div className="text-slate-400 dark:text-slate-600 animate-pulse">[ AWAITING SENSOR TELEMETRY STREAM... ]</div>
-              ) : (
-                logs.map((log, index) => (
-                  <div key={index} className="leading-relaxed">
-                    <span className="text-slate-400 dark:text-slate-500 font-semibold">{log.substring(0, 10)}</span>
-                    <span className={log.includes("Classification") || log.includes("Score") || log.includes("FRESH") ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-slate-800 dark:text-slate-200"}>
-                      {log.substring(10)}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
+            {/* Isolated High-Frequency Logs Inset Window */}
+            <MissionTerminalLogs />
 
             <div className="border-t border-slate-200 dark:border-slate-800/80 pt-2 mt-2 font-mono text-[8px] text-slate-400 dark:text-slate-600 flex justify-between font-semibold">
               <span>SYS_T_STAMP: LIVE</span>

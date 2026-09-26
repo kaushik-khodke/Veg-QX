@@ -10,10 +10,12 @@ import { Upload, Terminal, BarChart2, AlertTriangle } from "lucide-react";
 import { FOOD_TYPES } from "@/lib/constants";
 
 export default function PredictionPage() {
+  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<"single" | "multi" | "csv">("single");
   const [commodity, setCommodity] = useState<string>("tomato");
 
   useEffect(() => {
+    setMounted(true);
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("vegqx_commodity");
       if (saved) setCommodity(saved);
@@ -69,10 +71,12 @@ export default function PredictionPage() {
     e.preventDefault();
     setSingleLoading(true);
     try {
+      const specPrefix = commodity.slice(0, 3).toUpperCase();
       const res = await api.predictSingle({
         ...singleInput,
         commodity,
         food_type: commodity,
+        specimen_id: `${specPrefix}-${singleInput.tomato_id || 1001}`,
         input_source: "manual",
       });
       setSingleResult(res);
@@ -115,10 +119,12 @@ export default function PredictionPage() {
     e.preventDefault();
     setMultiLoading(true);
     try {
+      const specPrefix = commodity.slice(0, 3).toUpperCase();
       const readings = multiRows.map((r) => ({
         ...r,
         commodity,
         food_type: commodity,
+        specimen_id: `${specPrefix}-${multiTomatoId}`,
         tomato_id: multiTomatoId,
         input_source: "manual",
       }));
@@ -161,7 +167,7 @@ export default function PredictionPage() {
     msgs.push(`✔ File size: ${(selectedFile.size / 1024).toFixed(2)} KB`);
 
     try {
-      const res = await api.uploadCSV(selectedFile);
+      const res = await api.uploadCSV(selectedFile, commodity);
       setCsvResult(res);
       msgs.push(`✔ Schema Validation: Success`);
       msgs.push(`✔ Scanned ${res.summary.total_samples} valid rows.`);
@@ -200,27 +206,32 @@ export default function PredictionPage() {
           <span className="text-[11px] font-mono font-bold text-slate-500 uppercase tracking-widest">Active Commodity Target:</span>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {FOOD_TYPES.filter((f) => !f.disabled).map((f) => (
-            <button
-              key={f.value}
-              type="button"
-              onClick={() => handleCommoditySelect(f.value)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono flex items-center gap-1.5 transition-all ${
-                commodity === f.value
-                  ? "bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/25"
-                  : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-emerald-500/50"
-              }`}
-            >
-              <span>{f.icon}</span>
-              <span>{f.label}</span>
-            </button>
-          ))}
+          {FOOD_TYPES.filter((f) => !f.disabled).map((f) => {
+            const isSelected = (mounted ? commodity : "tomato") === f.value;
+            return (
+              <button
+                key={f.value}
+                type="button"
+                suppressHydrationWarning
+                onClick={() => handleCommoditySelect(f.value)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono flex items-center gap-1.5 transition-all ${
+                  isSelected
+                    ? "bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/25"
+                    : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-emerald-500/50"
+                }`}
+              >
+                <span>{f.icon}</span>
+                <span>{f.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Navigation tabs */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 font-mono text-xs">
         <button
+          suppressHydrationWarning
           onClick={() => setActiveTab("single")}
           className={`px-4 py-2 border-b-2 font-semibold transition-all ${
             activeTab === "single"
@@ -231,6 +242,7 @@ export default function PredictionPage() {
           01 / SINGLE READING MANUAL INPUT
         </button>
         <button
+          suppressHydrationWarning
           onClick={() => setActiveTab("multi")}
           className={`px-4 py-2 border-b-2 font-semibold transition-all ${
             activeTab === "multi"
@@ -241,6 +253,7 @@ export default function PredictionPage() {
           02 / 10-POSITION SPECIMEN ARRAY
         </button>
         <button
+          suppressHydrationWarning
           onClick={() => setActiveTab("csv")}
           className={`px-4 py-2 border-b-2 font-semibold transition-all ${
             activeTab === "csv"
@@ -270,6 +283,7 @@ export default function PredictionPage() {
                   <label className="block mb-1 uppercase tracking-widest text-slate-500 text-[9px] font-semibold">Tomato ID</label>
                   <input
                     type="number"
+                    suppressHydrationWarning
                     value={singleInput.tomato_id}
                     onChange={(e) => setSingleInput({ ...singleInput, tomato_id: parseInt(e.target.value) || 0 })}
                     className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-slate-200 outline-none focus:border-emerald-500 shadow-xs"
@@ -279,6 +293,7 @@ export default function PredictionPage() {
                   <label className="block mb-1 uppercase tracking-widest text-slate-500 text-[9px] font-semibold">Position (1-10)</label>
                   <input
                     type="number"
+                    suppressHydrationWarning
                     value={singleInput.position}
                     onChange={(e) => setSingleInput({ ...singleInput, position: parseInt(e.target.value) || 1 })}
                     className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-slate-200 outline-none focus:border-emerald-500 shadow-xs"
@@ -298,6 +313,7 @@ export default function PredictionPage() {
                     min="10"
                     max="600"
                     step="0.5"
+                    suppressHydrationWarning
                     value={singleInput[band as keyof typeof singleInput]}
                     onChange={(e) => setSingleInput({ ...singleInput, [band]: parseFloat(e.target.value) })}
                     className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
@@ -308,6 +324,7 @@ export default function PredictionPage() {
 
             <button
               type="submit"
+              suppressHydrationWarning
               disabled={singleLoading}
               className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-lg text-xs transition-all shadow-[0_4px_14px_rgba(16,185,129,0.3)] uppercase tracking-wider font-mono"
             >

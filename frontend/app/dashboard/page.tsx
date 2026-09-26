@@ -30,9 +30,19 @@ export default function LiveDashboard() {
   const [isConnected, setIsConnected] = useState(false);
   const [latestReading, setLatestReading] = useState<any>(null);
   const [prediction, setPrediction] = useState<any>(null);
+  const [commodity, setCommodity] = useState<string>("tomato");
 
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("vegqx_commodity");
+      if (saved) setCommodity(saved);
+      const onCommChange = (e: any) => {
+        if (e.detail) setCommodity(e.detail);
+      };
+      window.addEventListener("commodityChanged", onCommChange);
+      return () => window.removeEventListener("commodityChanged", onCommChange);
+    }
   }, []);
   
   // Historical stats accumulators for Module 3 (Min, Max, Avg, Current)
@@ -55,8 +65,9 @@ export default function LiveDashboard() {
     const connectWS = () => {
       if (!isConnected || isCancelled) return;
 
-      console.log("[Dashboard] Connecting WebSocket to", `${WS_BASE_URL}/live_sensor_data`);
-      const ws = new WebSocket(`${WS_BASE_URL}/live_sensor_data`);
+      const wsUrl = `${WS_BASE_URL}/live_sensor_data?commodity=${encodeURIComponent(commodity)}`;
+      console.log("[Dashboard] Connecting WebSocket to", wsUrl);
+      const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -125,7 +136,7 @@ export default function LiveDashboard() {
         wsRef.current = null;
       }
     };
-  }, [isConnected]);
+  }, [isConnected, commodity]);
 
   // Helper to extract band value with case-insensitivity
   const getBandVal = (obj: any, bandName: string): number => {
