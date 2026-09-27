@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import USBStatusPanel from "@/components/sensor/USBStatusPanel";
 import SensorCard from "@/components/sensor/SensorCard";
 import SpectralChart from "@/components/sensor/SpectralChart";
@@ -57,6 +57,32 @@ export default function LiveDashboard() {
 
   const wsRef = useRef<WebSocket | null>(null);
 
+  // Unified reading handler for both WebSocket and Web Serial
+  const handleReadingData = useCallback((raw: any) => {
+    if (!raw) return;
+    setLatestReading(raw);
+
+    // 1. Update stats accumulators dynamically
+    setAccumulators((prev) => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach((band) => {
+        const val = getBandVal(raw, band);
+        if (val !== undefined && typeof val === "number" && !isNaN(val) && val > 0) {
+          const acc = { ...updated[band] };
+          acc.sum += val;
+          acc.count += 1;
+          if (val < acc.min) acc.min = val;
+          if (val > acc.max) acc.max = val;
+          updated[band] = acc;
+        }
+      });
+      return updated;
+    });
+
+    // 2. Set prediction state directly from payload
+    setPrediction(raw);
+  }, []);
+
   // Set up resilient WebSocket connection when USB link state changes
   useEffect(() => {
     let reconnectTimer: any = null;
@@ -78,29 +104,7 @@ export default function LiveDashboard() {
         try {
           const payload = JSON.parse(event.data);
           if (payload.status === "reading" && payload.data) {
-            const raw = payload.data;
-            console.log("[FRONTEND STATE UPDATE]", raw);
-            setLatestReading(raw);
-
-            // 1. Update stats accumulators dynamically
-            setAccumulators((prev) => {
-              const updated = { ...prev };
-              Object.keys(updated).forEach((band) => {
-                const val = getBandVal(raw, band);
-                if (val !== undefined && typeof val === "number" && !isNaN(val) && val > 0) {
-                  const acc = { ...updated[band] };
-                  acc.sum += val;
-                  acc.count += 1;
-                  if (val < acc.min) acc.min = val;
-                  if (val > acc.max) acc.max = val;
-                  updated[band] = acc;
-                }
-              });
-              return updated;
-            });
-
-            // 2. Set prediction state directly from WebSocket payload
-            setPrediction(raw);
+            handleReadingData(payload.data);
           }
         } catch (err) {
           console.error("[Dashboard] WebSocket message parse error:", err);
@@ -180,7 +184,7 @@ export default function LiveDashboard() {
       </div>
 
       {/* USB Connection Panel */}
-      <USBStatusPanel onStatusChange={setIsConnected} />
+      <USBStatusPanel onStatusChange={setIsConnected} onReading={handleReadingData} commodity={commodity} />
 
       {/* Main Grid: Live Cards + Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">

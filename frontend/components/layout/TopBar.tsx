@@ -51,8 +51,21 @@ export default function TopBar({ isSidebarOpen = true, onToggleSidebar }: TopBar
       const onCommChange = (e: any) => {
         if (e.detail) setCommodity(e.detail);
       };
+      const onUsbChange = (e: any) => {
+        if (e.detail) {
+          setStatus((prev) => ({
+            ...prev,
+            usb_connected: !!e.detail.connected,
+            usb_port: e.detail.port || (e.detail.connected ? "COM8" : null),
+          }));
+        }
+      };
       window.addEventListener("commodityChanged", onCommChange);
-      return () => window.removeEventListener("commodityChanged", onCommChange);
+      window.addEventListener("vegqx_usb_status_changed", onUsbChange);
+      return () => {
+        window.removeEventListener("commodityChanged", onCommChange);
+        window.removeEventListener("vegqx_usb_status_changed", onUsbChange);
+      };
     }
   }, []);
 
