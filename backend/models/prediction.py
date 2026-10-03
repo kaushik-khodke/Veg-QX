@@ -46,6 +46,10 @@ class PredictionResponse(BaseModel):
     position: Optional[int] = None
     is_ood: Optional[bool] = False
     ood_reasons: Optional[List[str]] = []
+    ripeness_stage: Optional[str] = "Ripe"
+    is_unripe: Optional[bool] = False
+    ripeness_index: Optional[float] = 0.0
+    raw_freshness_score: Optional[float] = None
 
 
 class BatchPredictionRequest(BaseModel):

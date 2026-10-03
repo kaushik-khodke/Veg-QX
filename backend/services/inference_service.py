@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Optional
 
 from config import FOOD_CONFIGS, MODELS_DIR, PERFORMANCE_THRESHOLD_R2
-from utils.index_calculator import compute_all_indices
+from utils.index_calculator import compute_all_indices, compute_ripeness
 
 
 class InferenceService:
@@ -224,10 +224,20 @@ class InferenceService:
         # If OOD, calibrate confidence score downward
         calibrated_confidence = round(confidence * 0.5, 2) if is_ood else confidence
 
+        # Ripeness & Maturity Evaluation
+        ripeness_info = compute_ripeness(
+            commodity=self.food_type,
+            raw_bands=raw_bands,
+            indices=indices,
+            raw_freshness_score=freshness_score,
+        )
+        final_freshness_score = ripeness_info["calibrated_freshness_score"]
+
         return {
             "commodity":            self.food_type,
             "food_type":            self.food_type,
-            "freshness_score":      freshness_score,
+            "freshness_score":      final_freshness_score,
+            "raw_freshness_score":  freshness_score,
             "category":             category,
             "confidence_pct":       calibrated_confidence,
             "confidence_fresh":     prob_dict.get("Fresh", 0.0),
@@ -239,6 +249,9 @@ class InferenceService:
             "model_version":        self.get_canonical_model_name(),
             "is_ood":               is_ood,
             "ood_reasons":          ood_reasons,
+            "is_unripe":            ripeness_info["is_unripe"],
+            "ripeness_stage":       ripeness_info["ripeness_stage"],
+            "ripeness_index":       ripeness_info["ripeness_index"],
         }
 
     def predict_batch(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -260,7 +273,8 @@ class InferenceService:
 
         X = df[self.features]
 
-        df["freshness_score"] = self.regressor.predict(X).clip(0, 100).round(4)
+        raw_scores = self.regressor.predict(X).clip(0, 100).round(4)
+        df["raw_freshness_score"] = raw_scores
 
         probs = self.classifier.predict_proba(X)
         df["category"] = self.label_encoder.inverse_transform(np.argmax(probs, axis=1))
@@ -268,6 +282,18 @@ class InferenceService:
         classes = list(self.label_encoder.classes_)
         for i, cls in enumerate(classes):
             df[f"confidence_{cls.lower()}"] = probs[:, i].round(4)
+
+        # Compute ripeness and calibrated freshness scores
+        def _calc_row_ripeness(row):
+            raw_b = {b: float(row[b]) for b in ["Blue", "Green", "Yellow", "Orange", "Red", "NIR"]}
+            idx_dict = {idx: float(row[idx]) for idx in ["NDVI", "GNDVI", "RVI"]}
+            return compute_ripeness(self.food_type, raw_b, idx_dict, float(row["raw_freshness_score"]))
+
+        ripeness_results = df.apply(_calc_row_ripeness, axis=1)
+        df["is_unripe"] = [r["is_unripe"] for r in ripeness_results]
+        df["ripeness_stage"] = [r["ripeness_stage"] for r in ripeness_results]
+        df["ripeness_index"] = [r["ripeness_index"] for r in ripeness_results]
+        df["freshness_score"] = [r["calibrated_freshness_score"] for r in ripeness_results]
 
         df["model_version"] = self.get_canonical_model_name()
         return df
