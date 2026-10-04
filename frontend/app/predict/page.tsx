@@ -365,7 +365,12 @@ export default function PredictionPage() {
                     <FreshnessGauge score={singleResult.freshness_score} />
                   </div>
                   <div className="flex flex-col justify-between gap-6">
-                    <CategoryCard category={singleResult.category} confidence={singleResult.confidence_pct} />
+                    <CategoryCard
+                      category={singleResult.category}
+                      confidence={singleResult.confidence_pct}
+                      is_unripe={singleResult.is_unripe}
+                      ripeness_stage={singleResult.ripeness_stage}
+                    />
                     <div className="glass-panel rounded-2xl p-4 border border-slate-200 dark:border-slate-800/40 text-[10px] font-mono text-slate-600 dark:text-slate-400 space-y-1 shadow-sm">
                       <div>TARGET COMMODITY: <span className="text-emerald-600 dark:text-emerald-400 font-bold uppercase">{singleResult.commodity || commodity}</span></div>
                       <div>SYS ACTIVE MODEL: <span className="text-slate-900 dark:text-white font-bold">{singleResult.model_version}</span></div>
@@ -535,6 +540,11 @@ export default function PredictionPage() {
                             }`}>
                               {p.category}
                             </span>
+                            {p.category === "Fresh" && p.is_unripe && (
+                              <span className="ml-1 px-1 py-0.5 rounded font-extrabold text-[8px] uppercase bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-300 dark:border-amber-500/30">
+                                Unripe
+                              </span>
+                            )}
                           </td>
                         </tr>
                       ))}
