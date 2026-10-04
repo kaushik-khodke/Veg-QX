@@ -84,6 +84,12 @@ def _migrate_database_schema(conn: sqlite3.Connection):
             cursor.execute("ALTER TABLE predictions ADD COLUMN sensor_type TEXT DEFAULT 'AS7341'")
         if "device_id" not in pred_cols:
             cursor.execute("ALTER TABLE predictions ADD COLUMN device_id TEXT DEFAULT 'ESP32_01'")
+        if "ripeness_stage" not in pred_cols:
+            cursor.execute("ALTER TABLE predictions ADD COLUMN ripeness_stage TEXT DEFAULT 'Ripe'")
+        if "is_unripe" not in pred_cols:
+            cursor.execute("ALTER TABLE predictions ADD COLUMN is_unripe INTEGER DEFAULT 0")
+        if "ripeness_index" not in pred_cols:
+            cursor.execute("ALTER TABLE predictions ADD COLUMN ripeness_index REAL DEFAULT 0.0")
 
     # 2. Migrations for verified_predictions table
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='verified_predictions'")
@@ -106,6 +112,12 @@ def _migrate_database_schema(conn: sqlite3.Connection):
             cursor.execute("ALTER TABLE verified_predictions ADD COLUMN ndvi REAL")
             cursor.execute("ALTER TABLE verified_predictions ADD COLUMN gndvi REAL")
             cursor.execute("ALTER TABLE verified_predictions ADD COLUMN rvi REAL")
+        if "ripeness_stage" not in ver_cols:
+            cursor.execute("ALTER TABLE verified_predictions ADD COLUMN ripeness_stage TEXT DEFAULT 'Ripe'")
+        if "is_unripe" not in ver_cols:
+            cursor.execute("ALTER TABLE verified_predictions ADD COLUMN is_unripe INTEGER DEFAULT 0")
+        if "ripeness_index" not in ver_cols:
+            cursor.execute("ALTER TABLE verified_predictions ADD COLUMN ripeness_index REAL DEFAULT 0.0")
 
     # 3. Migrations for retraining_runs table
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='retraining_runs'")
@@ -298,7 +310,8 @@ def save_prediction(data: dict) -> int:
         freshness_score, category,
         confidence_fresh, confidence_aging, confidence_spoiling,
         model_version, input_source, status,
-        software_version, firmware_version, sensor_type, device_id
+        software_version, firmware_version, sensor_type, device_id,
+        ripeness_stage, is_unripe, ripeness_index
     ) VALUES (
         :timestamp, :food_type, :commodity, :specimen_id, :tomato_id, :position,
         :blue, :green, :yellow, :orange, :red, :nir,
@@ -306,7 +319,8 @@ def save_prediction(data: dict) -> int:
         :freshness_score, :category,
         :confidence_fresh, :confidence_aging, :confidence_spoiling,
         :model_version, :input_source, 'PENDING',
-        :software_version, :firmware_version, :sensor_type, :device_id
+        :software_version, :firmware_version, :sensor_type, :device_id,
+        :ripeness_stage, :is_unripe, :ripeness_index
     )
     """
     # Robust case-insensitive getter
@@ -356,6 +370,9 @@ def save_prediction(data: dict) -> int:
         "firmware_version":     data.get("firmware_version", "v2.0"),
         "sensor_type":          data.get("sensor_type", "AS7341"),
         "device_id":            data.get("device_id", "ESP32_01"),
+        "ripeness_stage":       data.get("ripeness_stage", "Ripe"),
+        "is_unripe":            1 if data.get("is_unripe") else 0,
+        "ripeness_index":       float(data.get("ripeness_index", 0.0) or 0.0),
     }
     with db_context() as conn:
         cursor = conn.execute(sql, row)

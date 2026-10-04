@@ -48,7 +48,10 @@ CREATE TABLE IF NOT EXISTS predictions (
     software_version    TEXT    DEFAULT '1.1',
     firmware_version    TEXT    DEFAULT 'v2.0',
     sensor_type         TEXT    DEFAULT 'AS7341',
-    device_id           TEXT    DEFAULT 'ESP32_01'
+    device_id           TEXT    DEFAULT 'ESP32_01',
+    ripeness_stage      TEXT    DEFAULT 'Ripe',
+    is_unripe           INTEGER DEFAULT 0,
+    ripeness_index      REAL    DEFAULT 0.0
 );
 
 CREATE INDEX IF NOT EXISTS idx_predictions_timestamp  ON predictions(timestamp);
