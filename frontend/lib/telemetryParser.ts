@@ -16,6 +16,8 @@ export interface ParsedReading {
   tomato_id?: number;
   raw_line?: string;
   timestamp?: number;
+  is_unripe?: boolean;
+  ripeness_stage?: string;
 }
 
 export function parseTelemetryLine(rawLine: string): ParsedReading | null {
@@ -55,6 +57,7 @@ export function parseTelemetryLine(rawLine: string): ParsedReading | null {
           const ndvi = (nir - red) / (nir + red + 1e-8);
           const gndvi = (nir - green) / (nir + green + 1e-8);
           const rvi = nir / (red + 1e-8);
+          const isUnripe = ndvi >= 0.60 && (red <= green * 1.25 || (red - green) / (red + green + 1e-8) <= 0.12);
 
           return {
             Blue: normalized["Blue"],
@@ -70,6 +73,8 @@ export function parseTelemetryLine(rawLine: string): ParsedReading | null {
             tomato_id: normalized["tomato_id"],
             raw_line: line,
             timestamp: Date.now(),
+            is_unripe: isUnripe,
+            ripeness_stage: isUnripe ? "Unripe" : "Ripe",
           };
         }
       }
@@ -107,6 +112,7 @@ export function parseTelemetryLine(rawLine: string): ParsedReading | null {
     const ndvi = kv["ndvi"] !== undefined ? kv["ndvi"] : (nir - red) / (nir + red + 1e-8);
     const gndvi = kv["gndvi"] !== undefined ? kv["gndvi"] : (nir - green) / (nir + green + 1e-8);
     const rvi = kv["rvi"] !== undefined ? kv["rvi"] : nir / (red + 1e-8);
+    const isUnripe = ndvi >= 0.60 && (red <= green * 1.25 || (red - green) / (red + green + 1e-8) <= 0.12);
 
     return {
       Blue: kv["blue"] || 0.0,
@@ -122,6 +128,8 @@ export function parseTelemetryLine(rawLine: string): ParsedReading | null {
       tomato_id: kv["tomato_id"] !== undefined ? Math.floor(kv["tomato_id"]) : undefined,
       raw_line: line,
       timestamp: Date.now(),
+      is_unripe: isUnripe,
+      ripeness_stage: isUnripe ? "Unripe" : "Ripe",
     };
   }
 

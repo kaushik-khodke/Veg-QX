@@ -242,6 +242,8 @@ export default function LiveDashboard() {
           <CategoryCard
             category={prediction?.category || "Aging"}
             confidence={prediction?.confidence_pct ?? prediction?.confidence ?? 0}
+            is_unripe={prediction?.is_unripe}
+            ripeness_stage={prediction?.ripeness_stage}
           />
           
           {/* Metadata information card */}

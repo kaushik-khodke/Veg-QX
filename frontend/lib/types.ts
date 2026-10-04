@@ -38,6 +38,10 @@ export interface PredictionRecord {
   input_source: "manual" | "usb" | "csv_upload";
   is_ood?: boolean;
   ood_reasons?: string[];
+  is_unripe?: boolean;
+  ripeness_stage?: string;
+  ripeness_index?: number;
+  raw_freshness_score?: number;
 }
 
 export interface ModelInfo {

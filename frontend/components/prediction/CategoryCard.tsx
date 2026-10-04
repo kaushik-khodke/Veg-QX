@@ -5,9 +5,11 @@ import { CheckCircle2, AlertTriangle, ShieldAlert } from "lucide-react";
 interface CategoryCardProps {
   category: "Fresh" | "Aging" | "Spoiling";
   confidence: number;
+  is_unripe?: boolean;
+  ripeness_stage?: string;
 }
 
-export default function CategoryCard({ category, confidence }: CategoryCardProps) {
+export default function CategoryCard({ category, confidence, is_unripe, ripeness_stage }: CategoryCardProps) {
   const getThemeStyles = () => {
     switch (category) {
       case "Fresh":
@@ -70,9 +72,18 @@ export default function CategoryCard({ category, confidence }: CategoryCardProps
         <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-widest block font-semibold">
           Classification Target Output
         </span>
-        <h4 className={`text-2xl font-black uppercase tracking-wider ${styles.text}`}>
-          {confidence > 0 ? category : "STANDBY"}
-        </h4>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <h4 className={`text-2xl font-black uppercase tracking-wider ${styles.text}`}>
+            {confidence > 0 ? category : "STANDBY"}
+          </h4>
+          {confidence > 0 && category === "Fresh" && is_unripe && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-mono font-extrabold uppercase bg-amber-500/15 dark:bg-amber-400/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 dark:border-amber-400/30 shadow-xs animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-ping" />
+              Unripe
+            </span>
+          )}
+        </div>
+
         <div className="text-[12px] font-mono text-slate-600 dark:text-slate-400">
           {confidence > 0 ? (
             <>
