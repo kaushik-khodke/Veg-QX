@@ -89,6 +89,10 @@ def predict_single_reading(
             position=req.position,
             is_ood=res.get("is_ood", False),
             ood_reasons=res.get("ood_reasons", []),
+            ripeness_stage=res.get("ripeness_stage", "Ripe"),
+            is_unripe=res.get("is_unripe", False),
+            ripeness_index=res.get("ripeness_index", 0.0),
+            raw_freshness_score=res.get("raw_freshness_score"),
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -168,6 +172,10 @@ def predict_batch_readings(
                     position=reading.position,
                     is_ood=res.get("is_ood", False),
                     ood_reasons=res.get("ood_reasons", []),
+                    ripeness_stage=res.get("ripeness_stage", "Ripe"),
+                    is_unripe=res.get("is_unripe", False),
+                    ripeness_index=res.get("ripeness_index", 0.0),
+                    raw_freshness_score=res.get("raw_freshness_score"),
                 )
             )
 
